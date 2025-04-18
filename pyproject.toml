@@ -1,9 +1,13 @@
 [project]
-name = "sqrs-project"
+name = "mood_diary"
 version = "0.1.0"
 description = ""
 authors = [
-    { name = "Your Name", email = "you@example.com" }
+    { name = "Azamat Bayramov", email = "a.bayramov@innopolis.university" },
+    { name = "Darya Koncheva", email = "d.koncheva@innopolis.university" },
+    { name = "Matthew Rusakov", email = "m.rusakov@innopolis.university" },
+    { name = "Denis Mikhailov", email = "d.mikhailov@innopolis.university" },
+    { name = "Ilya Zubkov", email = "i.zubkov@innopolis.university" }
 ]
 readme = "README.md"
 requires-python = ">=3.11"
