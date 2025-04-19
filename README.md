@@ -29,6 +29,9 @@
 * `username`: string
 * `hashed_password`: string
 * `name`: string
+* `created_at`: datetime
+* `updated_at`: datetime
+* `password_updated_at`: datetime
 
 ### Specific requirements
 
@@ -47,7 +50,7 @@ Access and refresh tokens lifetimes are specified in .env file.
 1) `POST /auth/register`
     * Request Body: `{"username": "string", "password": "string", "name": "string"}`
     * Response:
-        * Success: 200 with JSON `{"id": "string", "username": "string", "name": "string"}`
+        * Success: 200 with JSON `{"id": "string", "username": "string", "name": "string", "created_at": datetime, "updated_at": datetime, "password_updated_at": datetime}`
         * Error: 400 with error message - Username already exists.
         * Error: 422 with error message - Username/name/password are in the wrong format.
 2) `POST /auth/login`
@@ -68,7 +71,7 @@ Access and refresh tokens lifetimes are specified in .env file.
 5) `GET /auth/profile`
     * Request Header: `Authorization: Bearer <access_token>`
     * Response:
-        * Success: 200 with JSON `{"id": "string", "username": "string", "name": "string"}`
+        * Success: 200 with JSON `{"id": "string", "username": "string", "name": "string", "created_at": datetime, "updated_at": datetime, "password_updated_at": datetime}`
 6) `PUT /auth/password`
     * Request Header: `Authorization: Bearer <access_token>`
     * Request Body: `{"old_password": "string", "new_password": "string"}`
@@ -80,5 +83,5 @@ Access and refresh tokens lifetimes are specified in .env file.
     * Request Header: `Authorization: Bearer <access_token>`
     * Request Body: `{"name": "string"}`
     * Response:
-        * Success: 200 with JSON `{"id": "string", "username": "string", "name": "string"}`
+        * Success: 200 with JSON `{"id": "string", "username": "string", "name": "string", "created_at": datetime, "updated_at": datetime, "password_updated_at": datetime}`
         * Error: 422 with error message - Incorrect name format.
