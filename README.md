@@ -48,7 +48,8 @@ Access and refresh tokens lifetimes are specified in .env file.
     * Request Body: `{"username": "string", "password": "string", "name": "string"}`
     * Response:
         * Success: 200 with JSON `{"id": "string", "username": "string", "name": "string"}`
-        * Error: 400 with error message - Username already exists, or username/name/password are in the wrong format.
+        * Error: 400 with error message - Username already exists.
+        * Error: 422 with error message - Username/name/password are in the wrong format.
 2) `POST /auth/login`
     * Request Body: `{"username": "string", "password": "string"}`
     * Response:
@@ -80,4 +81,4 @@ Access and refresh tokens lifetimes are specified in .env file.
     * Request Body: `{"name": "string"}`
     * Response:
         * Success: 200 with JSON `{"id": "string", "username": "string", "name": "string"}`
-        * Error: 400 with error message - Incorrect name format.
+        * Error: 422 with error message - Incorrect name format.
