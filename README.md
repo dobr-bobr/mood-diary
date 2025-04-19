@@ -35,10 +35,10 @@
 
 ### Specific requirements
 
-* Username must be unique and at least 3 symbols and at most 20 symbols.
+* `username` must be unique and at least 3 symbols and at most 20 symbols.
 * Password must be at least 8 symbols, at most 32 symbols, with upper-case and lower-case letters, number and custom symbols in it.
-* Password will be stored in hashed format with salt in it.
-* Name must be at least 3 symbols and at most 32 symbols.
+* Password will be stored in hashed format as `hashed_password` with salt in it.
+* `name` must be at least 3 symbols and at most 32 symbols.
 * `created_at` is assigned during registration.
 * `updated_at` and `password_updated_at` are the same as `created_at` by default.
 * `updated_at` changes after any user profile update.
