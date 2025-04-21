@@ -108,9 +108,9 @@ Access and refresh tokens lifetimes are specified in .env file.
 
 ### Specific requirements
 
-* `date` must be valid date for previous or current days.
+* `date` must be today or a day in the past.
 * `value` is the mood of the user from 1 to 10.
-* `note` is optional. Must be at least empty string, at most 200 symbols.
+* `note` must be at least empty string, at most 200 symbols.
 * `created_at` is assigned during recording new stamp.
 * `updated_at` is the same as `created_at` by default.
 * `updated_at` changes after any moodStamp update, such as changing note or value.
@@ -141,8 +141,7 @@ Access and refresh tokens lifetimes are specified in .env file.
         * Success: 200 with JSON `{"id": "string", "user_id": "string", "date": date,
             "value": "int", "note": "string, "created_at": datetime, "updated_at": datetime}`
         * Error: 404 with error message - MoodStamp not found.
-        * Error: 400 with error message - New value is in the wrong format.
-        * Error: 422 with error message - Incorrect note format.
+        * Error: 422 with error message - Value/note are in the wrong format.
 5) `DELETE /moodstamp/<date>`
     * Response:
         * Success: 200
