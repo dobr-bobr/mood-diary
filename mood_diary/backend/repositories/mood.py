@@ -10,7 +10,7 @@ from mood_diary.backend.repositories.sсhemas.mood import (
 
 class MoodRepository(BaseRepository):
     @abstractmethod
-    async def get(self, entry_date: date) -> MoodStamp | None:
+    async def get(self, date: date) -> MoodStamp | None:
         """Get moodstamp by entry date. Returns None if stamp not found"""
         pass
 
@@ -21,12 +21,12 @@ class MoodRepository(BaseRepository):
 
     @abstractmethod
     async def update(
-            self, entry_date: date, body: UpdateMoodStamp
+            self, date: date, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """Update moodstamp by date. Returns None if moodstamp not found"""
         pass
 
     @abstractmethod
-    async def delete(self, entry_date: date) -> MoodStamp | None:
+    async def delete(self, date: date) -> MoodStamp | None:
         """Delete moodstamp by date. Returns None if stamp not found"""
         pass
