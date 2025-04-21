@@ -99,9 +99,9 @@ Access and refresh tokens lifetimes are specified in .env file.
 ### MoodStamp database fields
 
 * `id`: uuid4
-* `user_id`: string
-* `entry_date`: datetime
-* `type`: int
+* `user_id`: uuid4
+* `entry_date`: date
+* `value`: int
 * `note`: string
 * `created_at`: datetime
 * `updated_at`: datetime
@@ -109,54 +109,42 @@ Access and refresh tokens lifetimes are specified in .env file.
 ### Specific requirements
 
 * `entry_date` is assigned during recording new stamp, must be unique.
-* `type` is the mood of the user from 1 to 10.
+* `value` is the mood of the user from 1 to 10.
 * `note` is optional. Must be at least empty string, at most 200 symbols.
 * `created_at` is assigned during recording new stamp.
 * `updated_at` is the same as `created_at` by default.
-* `updated_at` changes after any moodStamp update, such as changing note or type.
+* `updated_at` changes after any moodStamp update, such as changing note or value.
 
 ### Endpoints
 
-1) `POST /mood_diary/record_mood`
-    * Request Body: `{"type": "int", "note": "string"}`
+1) `POST /moodstamp/`
+    * Request Body: `{"entry_date": date, "value": "int", "note": "string"}`
     * Response:
-        * Success: 200 with JSON `{"id": "string", "user_id": "string", "entry_date": datetime,
-            "type": "string", "created_at": datetime, "updated_at": datetime}`
+        * Success: 200 with JSON `{"id": "string", "user_id": "string", "entry_date": date,
+            "value": "string", "note": "string, "created_at": datetime, "updated_at": datetime}`
         * Error: 400 with error message - MoodStamp already exists.
         * Error: 404 with error message - User not found.
-        * Error: 422 with error message - Type/note are in the wrong format.
-2) `GET /mood_diary/moodstamp/<entry_date>`
-    * Request Body: `{"entry_date": datetime}`
+        * Error: 422 with error message - Value/note are in the wrong format.
+2) `GET /moodstamp/<entry_date>`
     * Response:
-        * Success: 200 with JSON `{"id": "string", "user_id": "string", "entry_date": datetime,
-            "type": "string", "created_at": datetime, "updated_at": datetime}`
+        * Success: 200 with JSON `{"id": "string", "user_id": "string", "entry_date": date,
+            "value": "string", "note": "string, "created_at": datetime, "updated_at": datetime}`
         * Error: 404 with error message - MoodStamp not found.
-3) `GET /mood_diary/month`
-    * Request Body: `{"entry_date": datetime}`
+3) `GET /moodstamp?start=&end=&value=`
     * Response:
-        * Success: 200 with JSON `{"entry_date": datetime, "moodstamp": 
+        * Success: 200 with JSON `{"entry_date": date, "moodstamp": 
                {"id": "string", "user_id": "string", "entry_date": datetime,
-                  "type": "string", "created_at": datetime, "updated_at": datetime}}`
-4) `GET /mood_diary/diary`
-    * Request Body: `{"entry_date": datetime}`
+                  "value": "string", "note": "string, "created_at": datetime, "updated_at": datetime}}`
+4) `PUT /moodstamp/<entry_date>`
+    * Request Body: `{"entry_date": date, "value": "int", "note": "string"}`
     * Response:
-        * Success: 200 with JSON `{"entry_date": datetime, "moodstamp": 
-               {"id": "string", "user_id": "string", "entry_date": datetime,
-                  "type": "string", "created_at": datetime, "updated_at": datetime}}`
-5) `PUT /mood_diary/type`
-    * Request Body: `{"entry_date": datetime, "type": "int"}`
-    * Response:
-        * Success: 200
+        * Success: 200 with JSON `{"id": "string", "user_id": "string", "entry_date": date,
+            "value": "string", "note": "string, "created_at": datetime, "updated_at": datetime}`
         * Error: 404 with error message - MoodStamp not found.
-        * Error: 400 with error message - New type is in the wrong format.
-6) `PUT /mood_diary/note`
-    * Request Body: `{"entry_date": datetime, "note": "string"}`
-    * Response:
-        * Success: 200
-        * Error: 404 with error message - MoodStamp not found.
+        * Error: 400 with error message - New value is in the wrong format.
         * Error: 422 with error message - Incorrect note format.
-7) `DELETE /mood_diary/unrecord_mood>`
-    * Request Body: `{"entry_date": datetime}`
+5) `DELETE /moodstamp/<entry_date>`
+    * Request Body: `{"entry_date": date}`
     * Response:
         * Success: 200
         * Error: 404 with error message - MoodStamp not found.
