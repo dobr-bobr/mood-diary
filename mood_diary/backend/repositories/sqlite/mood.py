@@ -22,7 +22,7 @@ class SQLiteMoodRepository(MoodRepository):
             CREATE TABLE IF NOT EXISTS moodstamps (
                 id TEXT PRIMARY KEY,
                 user_id TEXT FOREIGN KEY,
-                entry_date DATE UNIQUE NOT NULL,
+                date DATE UNIQUE NOT NULL,
                 value INT NOT NULL,
                 note TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -32,18 +32,18 @@ class SQLiteMoodRepository(MoodRepository):
         )
         self.connection.commit()
 
-    async def get(self, entry_date: date) -> MoodStamp | None:
+    async def get(self, date: date) -> MoodStamp | None:
         cursor = self.connection.cursor()
         cursor.execute(
-            "SELECT * FROM moodStamps WHERE entry_date = ?",
-            entry_date,
+            "SELECT * FROM moodStamps WHERE date = ?",
+            date,
         )
         row = cursor.fetchone()
         if row:
             return MoodStamp(
                 id=UUID(row[0]),
                 user_id=row[1],
-                entry_date=row[2],
+                date=row[2],
                 value=row[3],
                 note=row[4],
                 created_at=row[5],
@@ -56,11 +56,11 @@ class SQLiteMoodRepository(MoodRepository):
         pass
 
     async def update(
-            self, entry_date: UUID, body: UpdateMoodStamp
+            self, date: UUID, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """Update moodstamp by date. Returns None if moodstamp not found"""
         pass
 
-    async def delete(self, entry_date: date) -> MoodStamp | None:
+    async def delete(self, date: date) -> MoodStamp | None:
         """Delete moodstamp by date. Returns None if stamp not found"""
         pass
