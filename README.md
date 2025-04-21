@@ -118,7 +118,7 @@ Access and refresh tokens lifetimes are specified in .env file.
 ### Endpoints
 
 1) `POST /mood_diary/record_mood`
-    * Request Body: `{"user_id": "string", "type": "int", "note": "string"}`
+    * Request Body: `{"type": "int", "note": "string"}`
     * Response:
         * Success: 200 with JSON `{"id": "string", "user_id": "string", "entry_date": datetime,
             "type": "string", "created_at": datetime, "updated_at": datetime}`
