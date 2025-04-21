@@ -4,7 +4,7 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 ENV PATH="/root/.local/bin:$PATH"
 
-RUN pip install poetry
+RUN pip install poetry==2.1.2
 
 RUN poetry config virtualenvs.in-project true
 
