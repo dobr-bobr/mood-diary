@@ -1,35 +1,32 @@
 from abc import abstractmethod
-from uuid import UUID
+from datetime import date
 
 from mood_diary.backend.repositories.base import BaseRepository
 from mood_diary.backend.repositories.sсhemas.mood import (
     MoodStamp,
     CreateMoodStamp,
-    UpdateMoodType,
-    UpdateMoodNote,
+    UpdateMoodStamp
 )
 
 class MoodRepository(BaseRepository):
     @abstractmethod
-    async def get(self, mood_id: UUID) -> MoodStamp | None:
-        """Get user by ID. Returns None if user not found"""
+    async def get(self, entry_date: date) -> MoodStamp | None:
+        """Get moodstamp by entry date. Returns None if stamp not found"""
         pass
 
     @abstractmethod
     async def create(self, body: CreateMoodStamp) -> MoodStamp | None:
-        """Create new user. Returns None if user with the same username already exists"""
+        """Create new moodstamp. Returns None if moodstamp with the same entry date already exists"""
         pass
 
     @abstractmethod
-    async def update_profile(
-            self, mood_id: UUID, body: UpdateMoodType
+    async def update(
+            self, entry_date: date, body: UpdateMoodStamp
     ) -> MoodStamp | None:
-        """Update user profile by ID. Returns None if user not found"""
+        """Update moodstamp by date. Returns None if moodstamp not found"""
         pass
 
     @abstractmethod
-    async def update_hashed_password(
-            self, mood_id: UUID, body: UpdateMoodNote
-    ) -> MoodStamp | None:
-        """Update user hashed password by ID. Returns None if user not found"""
+    async def delete(self, entry_date: date) -> MoodStamp | None:
+        """Delete moodstamp by date. Returns None if stamp not found"""
         pass

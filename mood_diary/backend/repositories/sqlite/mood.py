@@ -1,12 +1,11 @@
 import sqlite3
-from datetime import UTC, datetime
+from datetime import UTC, datetime, date
 from uuid import UUID, uuid4
 
 from mood_diary.backend.repositories.sсhemas.mood import (
     MoodStamp,
-    UpdateMoodNote,
     CreateMoodStamp,
-    UpdateMoodType
+    UpdateMoodStamp
 )
 
 from mood_diary.backend.repositories.mood import MoodRepository
@@ -20,32 +19,32 @@ class SQLiteMoodRepository(MoodRepository):
         cursor = self.connection.cursor()
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS users (
+            CREATE TABLE IF NOT EXISTS moodstamps (
                 id TEXT PRIMARY KEY,
-                username TEXT UNIQUE NOT NULL,
-                name TEXT NOT NULL,
-                hashed_password TEXT NOT NULL,
+                user_id TEXT FOREIGN KEY,
+                entry_date DATE UNIQUE NOT NULL,
+                value INT NOT NULL,
+                note TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                password_updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """
         )
         self.connection.commit()
 
-    async def get(self, mood_id: UUID) -> MoodStamp | None:
+    async def get(self, entry_date: date) -> MoodStamp | None:
         cursor = self.connection.cursor()
         cursor.execute(
-            "SELECT * FROM moodStamps WHERE id = ?",
-            (str(mood_id),),
+            "SELECT * FROM moodStamps WHERE entry_date = ?",
+            entry_date,
         )
         row = cursor.fetchone()
         if row:
             return MoodStamp(
                 id=UUID(row[0]),
                 user_id=row[1],
-                entry_time=row[2],
-                type=row[3],
+                entry_date=row[2],
+                value=row[3],
                 note=row[4],
                 created_at=row[5],
                 updated_at=row[6],
@@ -53,17 +52,15 @@ class SQLiteMoodRepository(MoodRepository):
         return None
 
     async def create(self, body: CreateMoodStamp) -> MoodStamp | None:
-        """Create new user. Returns None if user with the same username already exists"""
+        """Create new moodstamp. Returns None if moodstamp with the same entry date already exists"""
         pass
 
-    async def update_profile(
-            self, mood_id: UUID, body: UpdateMoodType
+    async def update(
+            self, entry_date: UUID, body: UpdateMoodStamp
     ) -> MoodStamp | None:
-        """Update user profile by ID. Returns None if user not found"""
+        """Update moodstamp by date. Returns None if moodstamp not found"""
         pass
 
-    async def update_hashed_password(
-            self, mood_id: UUID, body: UpdateMoodNote
-    ) -> MoodStamp | None:
-        """Update user hashed password by ID. Returns None if user not found"""
+    async def delete(self, entry_date: date) -> MoodStamp | None:
+        """Delete moodstamp by date. Returns None if stamp not found"""
         pass
