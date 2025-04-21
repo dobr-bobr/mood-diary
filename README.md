@@ -108,7 +108,7 @@ Access and refresh tokens lifetimes are specified in .env file.
 
 ### Specific requirements
 
-* `entry_date` is assigned during recording new stamp, must be unique.
+* `entry_date` must be valid date for previous or current days.
 * `value` is the mood of the user from 1 to 10.
 * `note` is optional. Must be at least empty string, at most 200 symbols.
 * `created_at` is assigned during recording new stamp.
@@ -121,25 +121,25 @@ Access and refresh tokens lifetimes are specified in .env file.
     * Request Body: `{"entry_date": date, "value": "int", "note": "string"}`
     * Response:
         * Success: 200 with JSON `{"id": "string", "user_id": "string", "entry_date": date,
-            "value": "string", "note": "string, "created_at": datetime, "updated_at": datetime}`
+            "value": "int", "note": "string, "created_at": datetime, "updated_at": datetime}`
         * Error: 400 with error message - MoodStamp already exists.
         * Error: 404 with error message - User not found.
         * Error: 422 with error message - Value/note are in the wrong format.
 2) `GET /moodstamp/<entry_date>`
     * Response:
         * Success: 200 with JSON `{"id": "string", "user_id": "string", "entry_date": date,
-            "value": "string", "note": "string, "created_at": datetime, "updated_at": datetime}`
+            "value": "int", "note": "string, "created_at": datetime, "updated_at": datetime}`
         * Error: 404 with error message - MoodStamp not found.
 3) `GET /moodstamp?start=&end=&value=`
     * Response:
         * Success: 200 with JSON `{"entry_date": date, "moodstamp": 
                {"id": "string", "user_id": "string", "entry_date": datetime,
-                  "value": "string", "note": "string, "created_at": datetime, "updated_at": datetime}}`
+                  "value": "int", "note": "string, "created_at": datetime, "updated_at": datetime}}`
 4) `PUT /moodstamp/<entry_date>`
     * Request Body: `{"entry_date": date, "value": "int", "note": "string"}`
     * Response:
         * Success: 200 with JSON `{"id": "string", "user_id": "string", "entry_date": date,
-            "value": "string", "note": "string, "created_at": datetime, "updated_at": datetime}`
+            "value": "int", "note": "string, "created_at": datetime, "updated_at": datetime}`
         * Error: 404 with error message - MoodStamp not found.
         * Error: 400 with error message - New value is in the wrong format.
         * Error: 422 with error message - Incorrect note format.
