@@ -18,6 +18,7 @@ app = FastAPI(
     title=config.APP_TITLE,
     description=config.APP_DESCRIPTION,
     lifespan=lifespan,
+    root_path=config.ROOT_PATH,
 )
 
 
