@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes
     AUTH_TOKEN_REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
 
+    ROOT_PATH: str = "/api"
+
     SQLITE_DB_PATH: str = "mood_diary.db"
 
 
