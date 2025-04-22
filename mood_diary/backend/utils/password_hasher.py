@@ -5,15 +5,13 @@ from abc import ABC, abstractmethod
 
 
 class PasswordHasher(ABC):
+    # Hash a password
     @abstractmethod
-    def hash(self, password: str) -> str:
-        """Hash a password"""
-        pass
+    def hash(self, password: str) -> str: ...
 
+    # Verify a password against a stored hash
     @abstractmethod
-    def verify(self, password: str, stored_hash: str) -> bool:
-        """Verify a password against a stored hash"""
-        pass
+    def verify(self, password: str, stored_hash: str) -> bool: ...
 
 
 class SaltPasswordHasher(PasswordHasher):
@@ -57,10 +55,5 @@ class SaltPasswordHasher(PasswordHasher):
             self.hash_name, password_bytes, salt, self.hash_iterations
         )
 
-    def __password_bytes(self, password: str | bytes) -> bytes:
-        if isinstance(password, str):
-            return password.encode(self.encoding)
-        elif isinstance(password, bytes):
-            return password
-        else:
-            raise TypeError("Password must be str or bytes")
+    def __password_bytes(self, password: str) -> bytes:
+        return password.encode(self.encoding)
