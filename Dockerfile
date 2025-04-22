@@ -10,9 +10,11 @@ RUN poetry config virtualenvs.in-project true
 
 WORKDIR /app
 
-COPY . /app/
+COPY pyproject.toml poetry.lock* /app/
 
 RUN poetry install --no-interaction --no-ansi
+
+COPY . /app/
 
 ENV PATH="/app/.venv/bin:$PATH"
 
