@@ -35,7 +35,9 @@ router = APIRouter()
             "model": MessageResponse,
             "description": "Username already exists",
             "content": {
-                "application/json": {"example": {"message": "Username already exists"}}
+                "application/json": {
+                    "example": {"message": "Username already exists"}
+                }
             },
         },
     },
@@ -61,7 +63,9 @@ async def register(
             "content": {
                 "application/json": {
                     "example": {
-                        "message": "Incorrect password or username does not exist"
+                        "message": (
+                            "Incorrect password or username does not exist"
+                        )
                     }
                 }
             },
@@ -83,7 +87,9 @@ async def login(
             "model": MessageResponse,
             "description": "Invalid or expired token",
             "content": {
-                "application/json": {"example": {"message": "Invalid or expired token"}}
+                "application/json": {
+                    "example": {"message": "Invalid or expired token"}
+                }
             },
         },
     },
@@ -131,7 +137,9 @@ async def refresh_token(
             "model": MessageResponse,
             "description": "Invalid or expired token",
             "content": {
-                "application/json": {"example": {"message": "Invalid or expired token"}}
+                "application/json": {
+                    "example": {"message": "Invalid or expired token"}
+                }
             },
         },
     },
@@ -152,7 +160,9 @@ async def get_profile(
             "model": MessageResponse,
             "description": "Incorrect old password",
             "content": {
-                "application/json": {"example": {"message": "Incorrect old password"}}
+                "application/json": {
+                    "example": {"message": "Incorrect old password"}
+                }
             },
         },
     },
