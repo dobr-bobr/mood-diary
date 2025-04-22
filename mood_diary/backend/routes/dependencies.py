@@ -8,7 +8,10 @@ from mood_diary.backend.exceptions.user import InvalidOrExpiredAccessToken
 from mood_diary.backend.repositories.sqlite.user import SQLiteUserRepository
 from mood_diary.backend.repositories.user import UserRepository
 from mood_diary.backend.services.user import UserService
-from mood_diary.backend.utils.password_hasher import SaltPasswordHasher, PasswordHasher
+from mood_diary.backend.utils.password_hasher import (
+    SaltPasswordHasher,
+    PasswordHasher,
+)
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
     TokenManager,
