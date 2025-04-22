@@ -5,7 +5,9 @@ from mood_diary.backend.exceptions.base import BaseApplicationException
 
 class UsernameAlreadyExists(BaseApplicationException):
     def __init__(self):
-        super().__init__("Username already exists", status.HTTP_400_BAD_REQUEST)
+        super().__init__(
+            "Username already exists", status.HTTP_400_BAD_REQUEST
+        )
 
 
 class IncorrectPasswordOrUserDoesNotExists(BaseApplicationException):
@@ -30,7 +32,9 @@ class UserNotFound(BaseApplicationException):
 
 class IncorrectOldPassword(BaseApplicationException):
     def __init__(self):
-        super().__init__("Incorrect old password", status.HTTP_401_UNAUTHORIZED)
+        super().__init__(
+            "Incorrect old password", status.HTTP_401_UNAUTHORIZED
+        )
 
 
 class InvalidOrExpiredAccessToken(BaseApplicationException):
