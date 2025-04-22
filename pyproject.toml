@@ -29,4 +29,6 @@ build-backend = "poetry.core.masonry.api"
 flake8 = "^7.2.0"
 bandit = "^1.8.3"
 black = "^25.1.0"
+pytest = "^8.3.5"
+pytest-cov = "^6.1.1"
 
