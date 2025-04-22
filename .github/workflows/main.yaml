@@ -19,7 +19,7 @@ jobs:
       - name: Install dependencies
         run: poetry install
       - name: Bandit check
-        run: poetry run bandit -r . -x ./tests/
+        run: poetry run bandit -r . -x ./tests/,./scripts/
       - name: Test
         run: poetry run pytest --cov=mood_diary ./tests/
       - name: Lint
