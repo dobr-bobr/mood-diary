@@ -21,20 +21,16 @@ class TokenPayload(BaseModel):
 
 class TokenManager(ABC):
     @abstractmethod
-    def create_token(self, token_type: TokenType, user_id: UUID) -> str:
-        pass
+    def create_token(self, token_type: TokenType, user_id: UUID) -> str: ...
 
     @abstractmethod
-    def decode_token(self, token: str) -> TokenPayload | None:
-        pass
+    def decode_token(self, token: str) -> TokenPayload | None: ...
 
     @abstractmethod
-    def is_token_valid(self, token: str) -> bool:
-        pass
+    def is_token_valid(self, token: str) -> bool: ...
 
     @abstractmethod
-    def get_token_type(self, token: str) -> TokenType | None:
-        pass
+    def get_token_type(self, token: str) -> TokenType | None: ...
 
 
 class JWTTokenManager(TokenManager):
