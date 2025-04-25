@@ -24,5 +24,7 @@ jobs:
         run: poetry run pytest --cov=mood_diary ./tests/
       - name: Lint
         run: poetry run flake8 ./mood_diary --max-complexity 10
-      - name: Bandit check
+      - name: Bandit Check
         run: poetry run bandit -r . -x ./tests/,./scripts/
+      - name: Mutation Test
+        run: poetry run mutmut run --no-progress

@@ -41,11 +41,16 @@ pytest-dotenv = "^0.5.2"
 httpx = "^0.28.1"
 pytest-asyncio = "^0.26.0"
 mypy = "^1.15.0"
+mutmut = "^2.5.1"
 
 [tool.pytest.ini_options]
 pythonpath = [
-  "."
+    "."
 ]
 
 [tool.mypy]
 plugins = ['pydantic.mypy']
+
+[tool.mutmut]
+paths_to_mutate="mood_diary"
+runner="poetry run pytest ./tests/"
