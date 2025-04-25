@@ -3,6 +3,7 @@
 ## Table of contents
 
 * [Team Information](#team-information)
+* [User Stories](#user-stories)
 * [Auth flow](#auth-flow)
     * [User database fields](#user-database-fields)
     * [Specific requirements](#specific-requirements)
@@ -20,6 +21,30 @@
 | Matthew Rusakov | B22-SD-03 | <m.rusakov@innopolis.university>   |
 | Denis Mikhailov | B22-SD-03 | <d.mikhailov@innopolis.university> |
 | Ilya Zubkov     | B22-SD-03 | <i.zubkov@innopolis.university>    |
+
+## User stories
+
+#### User authentication and access
+- **US1.1** As a new user, I want to register with a username and password,
+  so that I can create and access my personal mood diary.
+- **US1.2** As a registered user, I want to log in with my username and password,
+  so that I can access and update my personal mood diary.
+
+#### Mood entry management
+- **US2.1** As a user, I want to record my daily mood using a color-coded system and a note,
+  so that I can track my emotional well-being.
+- **US2.2** As a user, I want to view all my logged mood entries,
+  so that I can browse and reflect on my emotional history.
+- **US2.3** As a user, I want to edit a previously logged mood entry, including its color and note,
+  so that I can correct or update my emotional records accurately.
+- **US2.4** As a user, I want to delete a previously logged mood entry,
+  so that I can remove mistakes or entries I no longer wish to keep.
+
+#### Mood visualization
+- **US3.1** As a user, I want to view my mood statistics in graphical format,
+  so that I can visually understand my emotional patterns.
+- **US3.2** As a user, I want to see a calendar view of the current month with mood entries visually marked,
+  so that I can track my mood logging consistency.
 
 ## Auth flow
 
