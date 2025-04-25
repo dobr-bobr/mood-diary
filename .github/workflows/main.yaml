@@ -18,9 +18,11 @@ jobs:
           poetry-version: '2'
       - name: Install dependencies
         run: poetry install
-      - name: Bandit check
-        run: poetry run bandit -r . -x ./tests/,./scripts/
+      - name: Analyze
+        run: poetry run mypy ./mood_diary
       - name: Test
         run: poetry run pytest --cov=mood_diary ./tests/
       - name: Lint
         run: poetry run flake8 ./mood_diary --max-complexity 10
+      - name: Bandit check
+        run: poetry run bandit -r . -x ./tests/,./scripts/
