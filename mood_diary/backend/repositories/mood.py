@@ -14,17 +14,9 @@ from mood_diary.backend.repositories.sсhemas.mood import (
 
 class MoodStampRepository(BaseRepository):
     @abstractmethod
-    async def get_with_date(self, date: date) -> MoodStamp | None:
+    async def get(self, date: date, user_id: UUID) -> MoodStamp | None:
         """
         Get moodstamp by entry date.
-        Returns None if stamp not found
-        """
-        pass
-
-    @abstractmethod
-    async def get_with_user_id(self, user_id: UUID) -> MoodStamp | None:
-        """
-        Get moodstamp by user id.
         Returns None if stamp not found
         """
         pass
