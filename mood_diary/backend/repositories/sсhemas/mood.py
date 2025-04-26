@@ -3,6 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel
 
+
 class MoodStamp(BaseModel):
     id: UUID
     user_id: UUID
@@ -12,16 +13,19 @@ class MoodStamp(BaseModel):
     created_at: datetime
     updated_at: datetime
 
+
 class CreateMoodStamp(BaseModel):
     date: date
     user_id: UUID
     value: int
-    note: str
+    note: str | None = None
+
 
 class UpdateMoodStamp(BaseModel):
     value: int | None = None
     note: str | None = None
     user_id: UUID
+
 
 class MoodStampFilter(BaseModel):
     user_id: UUID
