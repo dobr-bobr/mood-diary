@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import UTC, datetime, date
+from datetime import datetime, date
 from uuid import UUID, uuid4
 
 from mood_diary.backend.repositories.sсhemas.mood import (
@@ -32,7 +32,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         )
         self.connection.commit()
 
-    async def get_with_date(self, date: date, user_id: UUID) -> MoodStamp | None:
+    async def get(self, date: date, user_id: UUID) -> MoodStamp | None:
         cursor = self.connection.cursor()
         cursor.execute(
             "SELECT * FROM moodStamps WHERE date = ? AND user_id = ?",
