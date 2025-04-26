@@ -56,7 +56,7 @@ class SQLiteMoodRepository(MoodStampRepository):
     async def get_many(self, body: MoodStampFilter) -> list[MoodStamp] | None:
         cursor = self.connection.cursor()
         query = "SELECT * FROM moodStamps WHERE 1=1"
-        params = []
+        params: list[str | date | int] = []
 
         if body.user_id is not None:
             query += " AND user_id = ?"

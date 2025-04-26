@@ -104,6 +104,9 @@ class MoodService:
             body=filter,
         )
 
+        if moodstamps is None:
+            return []
+
         return [
             MoodStamp(
                 id=moodstamp.id,
