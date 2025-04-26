@@ -31,3 +31,4 @@ class MoodStampFilter(BaseModel):
     user_id: UUID
     start_date: date
     end_date: date
+    value: int
