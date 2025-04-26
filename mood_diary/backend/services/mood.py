@@ -97,3 +97,12 @@ class MoodService:
             )
             for moodstamp in moodstamps
         ]
+
+    async def delete(self, body: GetRequest) -> None:
+        success = await self.moodstamp_repository.delete(
+            user_id=body.user_id,
+            date=body.date,
+        )
+
+        if not success:
+            raise MoodStampNotExist()

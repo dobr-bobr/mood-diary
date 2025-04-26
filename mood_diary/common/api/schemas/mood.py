@@ -1,28 +1,28 @@
-from datetime import datetime, date
+from datetime import date
 from uuid import UUID
 
 from pydantic import BaseModel, Field
 
 
-class RecordRequest(BaseModel):
+class CreateMoodStampRequest(BaseModel):
     user_id: UUID
     date: date
     value: int = Field(..., max_digits=2)
     note: str | None = None
 
 
-class UpdateRequest(BaseModel):
+class UpdateMoodStampRequest(BaseModel):
     user_id: UUID
     value: int | None = None
     note: str | None = None
 
 
-class GetRequest(BaseModel):
+class GetMoodStampRequest(BaseModel):
     user_id: UUID
     date: date
 
 
-class GetManyRequest(BaseModel):
+class GetManyMoodStampsRequest(BaseModel):
     user_id: UUID
     start_date: date
     end_date: date
