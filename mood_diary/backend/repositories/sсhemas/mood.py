@@ -14,9 +14,16 @@ class MoodStamp(BaseModel):
 
 class CreateMoodStamp(BaseModel):
     date: date
+    user_id: UUID
     value: int
     note: str
 
 class UpdateMoodStamp(BaseModel):
-    value: int
-    note: str
+    value: int | None = None
+    note: str | None = None
+    user_id: UUID
+
+class MoodStampFilter(BaseModel):
+    user_id: UUID
+    start_date: date
+    end_date: date
