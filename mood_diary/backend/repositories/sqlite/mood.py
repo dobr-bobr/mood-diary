@@ -66,6 +66,9 @@ class SQLiteMoodRepository(MoodStampRepository):
         if body.end_date is not None:
             query += " AND date <= ?"
             params.append(body.end_date)
+        if body.value is not None:
+            query += " AND value = ?"
+            params.append(body.value)
 
         cursor.execute(query, params)
         rows = cursor.fetchall()

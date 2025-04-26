@@ -1,19 +1,15 @@
 from typing import List
 from uuid import UUID
+from datetime import date
+from fastapi import APIRouter, Depends, status, Path
 
-from fastapi import APIRouter, Response, Depends, status
-from google.protobuf import service
-
-from mood_diary.backend.repositories.sсhemas.mood import MoodStamp, CreateMoodStamp
 from mood_diary.backend.routes.dependencies import (
-    get_current_user_id,
-    get_mood_service,
+    get_mood_service, get_current_user_id,
 )
 from mood_diary.backend.services.mood import MoodService
-from mood_diary.backend.services.user import UserService
 from mood_diary.common.api.schemas.mood import (
 
-    CreateMoodStampRequest, GetMoodStampRequest, GetManyMoodStampsRequest, UpdateMoodStampRequest)
+    CreateMoodStampRequest, GetMoodStampRequest, GetManyMoodStampsRequest, UpdateMoodStampRequest, MoodStampSchema)
 from mood_diary.common.api.schemas.common import MessageResponse
 
 router = APIRouter()
@@ -21,11 +17,11 @@ router = APIRouter()
 
 @router.post(
     "/moodstamp/",
-    response_model=MoodStamp,
+    response_model=MoodStampSchema,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
-            "model": MoodStamp,
+            "model": MoodStampSchema,
             "description": "MoodStamp recorded successfully",
         },
         400: {
@@ -46,19 +42,12 @@ async def create(
 
 @router.get(
     "/moodstamp/{date}",
-    response_model=MoodStamp,
+    response_model=MoodStampSchema,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
-            "model": MoodStamp,
+            "model": MoodStampSchema,
             "description": "MoodStamp retrieved successfully",
-        },
-        status.HTTP_401_UNAUTHORIZED: {
-            "model": MessageResponse,
-            "description": "Invalid or expired token",
-            "content": {
-                "application/json": {"example": {"message": "Invalid or expired token"}}
-            },
         },
         status.HTTP_404_NOT_FOUND: {
             "model": MessageResponse,
@@ -70,27 +59,22 @@ async def create(
     },
 )
 async def get_moodstamp(
-        request: GetMoodStampRequest,
+        date: date = Path(...),
+        user_id: UUID = Depends(get_current_user_id),
         service: MoodService = Depends(get_mood_service),
 ):
+    request = GetMoodStampRequest(user_id=user_id, date=date)
     return await service.get(request)
 
 
 @router.get(
-    "/moodstamp?start=&end=&value=",
-    response_model=List[MoodStamp],
+    "/moodstamp/",
+    response_model=List[MoodStampSchema],
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
-            "model": List[MoodStamp],
+            "model": List[MoodStampSchema],
             "description": "MoodStamps retrieved successfully",
-        },
-        status.HTTP_401_UNAUTHORIZED: {
-            "model": MessageResponse,
-            "description": "Invalid or expired token",
-            "content": {
-                "application/json": {"example": {"message": "Invalid or expired token"}}
-            },
         },
         status.HTTP_404_NOT_FOUND: {
             "model": MessageResponse,
@@ -102,9 +86,18 @@ async def get_moodstamp(
     },
 )
 async def get_many_moodstamps(
-        request: GetManyMoodStampsRequest,
+        start_date: date,
+        end_date: date,
+        value: int | None = None,
+        user_id: UUID = Depends(get_current_user_id),
         service: MoodService = Depends(get_mood_service),
 ):
+    request = GetManyMoodStampsRequest(
+        user_id=user_id,
+        start_date=start_date,
+        end_date=end_date,
+        value=value,
+    )
     return await service.get_many(request)
 
 
@@ -112,14 +105,7 @@ async def get_many_moodstamps(
     "/moodstamp/{date}",
     status_code=status.HTTP_200_OK,
     responses={
-        status.HTTP_200_OK: {"description": "Password changed successfully"},
-        status.HTTP_401_UNAUTHORIZED: {
-            "model": MessageResponse,
-            "description": "Incorrect old password",
-            "content": {
-                "application/json": {"example": {"message": "Incorrect old password"}}
-            },
-        },
+        status.HTTP_200_OK: {"description": "MoodStamp updated successfully"},
         status.HTTP_404_NOT_FOUND: {
             "model": MessageResponse,
             "description": "MoodStamp not found",
@@ -137,10 +123,18 @@ async def get_many_moodstamps(
     },
 )
 async def update_moodstamp(
-        request: UpdateMoodStampRequest,
+        date: date = Path(...),
+        request: UpdateMoodStampRequest = Depends(),
+        user_id: UUID = Depends(get_current_user_id),
         service: MoodService = Depends(get_mood_service),
 ):
-    return await service.update(request)
+    request_data = UpdateMoodStampRequest(
+        user_id=user_id,
+        date=date,
+        value=request.value,
+        note=request.note,
+    )
+    return await service.update(request_data)
 
 
 @router.delete(
@@ -148,13 +142,6 @@ async def update_moodstamp(
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {"description": "MoodStamp deleted successfully"},
-        status.HTTP_401_UNAUTHORIZED: {
-            "model": MessageResponse,
-            "description": "Incorrect old password",
-            "content": {
-                "application/json": {"example": {"message": "Incorrect old password"}}
-            },
-        },
         status.HTTP_404_NOT_FOUND: {
             "model": MessageResponse,
             "description": "MoodStamp not found",
@@ -165,7 +152,9 @@ async def update_moodstamp(
     },
 )
 async def delete_moodstamp(
-        request: GetMoodStampRequest,
+        date: date = Path(...),
+        user_id: UUID = Depends(get_current_user_id),
         service: MoodService = Depends(get_mood_service),
 ):
+    request = GetMoodStampRequest(user_id=user_id, date=date)
     return await service.delete(request)
