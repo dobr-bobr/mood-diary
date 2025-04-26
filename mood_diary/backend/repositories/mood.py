@@ -8,7 +8,7 @@ from mood_diary.backend.repositories.sсhemas.mood import (
     MoodStamp,
     CreateMoodStamp,
     UpdateMoodStamp,
-    MoodStampFilter
+    MoodStampFilter,
 )
 
 
@@ -39,7 +39,7 @@ class MoodStampRepository(BaseRepository):
 
     @abstractmethod
     async def update(
-            self, date: date, user_id: UUID, body: UpdateMoodStamp
+        self, date: date, user_id: UUID, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """
         Update moodstamp by date.

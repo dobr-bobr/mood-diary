@@ -82,12 +82,16 @@ def get_user_service(
         token_manager=token_manager,
     )
 
+
 def get_moodstamp_repository(
     conn: sqlite3.Connection = Depends(get_connection),
 ) -> MoodStampRepository:
     return SQLiteMoodRepository(conn)
 
+
 def get_mood_service(
-    moodstamp_repository: MoodStampRepository = Depends(get_moodstamp_repository),
+    moodstamp_repository: MoodStampRepository = Depends(
+        get_moodstamp_repository
+    ),
 ) -> MoodService:
     return MoodService(moodstamp_repository)

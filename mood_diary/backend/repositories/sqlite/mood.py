@@ -5,7 +5,8 @@ from uuid import UUID, uuid4
 from mood_diary.backend.repositories.sсhemas.mood import (
     MoodStamp,
     CreateMoodStamp,
-    UpdateMoodStamp, MoodStampFilter
+    UpdateMoodStamp,
+    MoodStampFilter,
 )
 
 from mood_diary.backend.repositories.mood import MoodStampRepository
@@ -96,7 +97,7 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         cursor.execute(
             "SELECT id FROM moodStamps WHERE user_id = ? AND date = ?",
-            (str(body.user_id), body.date)
+            (str(body.user_id), body.date),
         )
         if cursor.fetchone():
             return None  # MoodStamp already exists
@@ -115,8 +116,8 @@ class SQLiteMoodRepository(MoodStampRepository):
                 body.value,
                 body.note,
                 created_at,
-                updated_at
-            )
+                updated_at,
+            ),
         )
         self.connection.commit()
 
@@ -127,11 +128,11 @@ class SQLiteMoodRepository(MoodStampRepository):
             value=body.value,
             note=body.note,
             created_at=created_at,
-            updated_at=updated_at
+            updated_at=updated_at,
         )
 
     async def update(
-            self, date: date, user_id: UUID, body: UpdateMoodStamp
+        self, date: date, user_id: UUID, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """Update moodstamp by date. Returns None if moodstamp not found"""
         cursor = self.connection.cursor()
@@ -139,16 +140,17 @@ class SQLiteMoodRepository(MoodStampRepository):
         # First get the existing stamp
         cursor.execute(
             "SELECT * FROM moodStamps WHERE user_id = ? AND date = ?",
-            (str(user_id), date))
+            (str(user_id), date),
+        )
         row = cursor.fetchone()
         if not row:
             return None
 
         updated_at = datetime.now()
         update_values = {
-            'value': body.value if body.value is not None else row[3],
-            'note': body.note if body.note is not None else row[4],
-            'updated_at': updated_at
+            "value": body.value if body.value is not None else row[3],
+            "note": body.note if body.note is not None else row[4],
+            "updated_at": updated_at,
         }
 
         # Perform the update
@@ -157,12 +159,12 @@ class SQLiteMoodRepository(MoodStampRepository):
             SET value = ?, note = ?, updated_at = ?
             WHERE user_id = ? AND date = ?""",
             (
-                update_values['value'],
-                update_values['note'],
-                update_values['updated_at'],
+                update_values["value"],
+                update_values["note"],
+                update_values["updated_at"],
                 str(user_id),
-                date
-            )
+                date,
+            ),
         )
         self.connection.commit()
 
@@ -170,10 +172,10 @@ class SQLiteMoodRepository(MoodStampRepository):
             id=UUID(row[0]),
             user_id=user_id,
             date=date,
-            value=update_values['value'],
-            note=update_values['note'],
+            value=update_values["value"],
+            note=update_values["note"],
             created_at=row[5],
-            updated_at=updated_at
+            updated_at=updated_at,
         )
 
     async def delete(self, date: date, user_id: UUID) -> MoodStamp | None:
@@ -183,7 +185,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         # First get the stamp to return it
         cursor.execute(
             "SELECT * FROM moodStamps WHERE user_id = ? AND date = ?",
-            (str(user_id), date)
+            (str(user_id), date),
         )
         row = cursor.fetchone()
         if not row:
@@ -192,7 +194,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         # Delete the stamp
         cursor.execute(
             "DELETE FROM moodStamps WHERE user_id = ? AND date = ?",
-            (str(user_id), date)
+            (str(user_id), date),
         )
         self.connection.commit()
 
@@ -203,5 +205,5 @@ class SQLiteMoodRepository(MoodStampRepository):
             value=row[3],
             note=row[4],
             created_at=row[5],
-            updated_at=row[6]
+            updated_at=row[6],
         )
