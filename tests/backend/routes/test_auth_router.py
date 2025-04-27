@@ -140,6 +140,51 @@ def test_register_success(
     mock_user_service.register.assert_awaited_once()
 
 
+def test_register_success_boundaries(
+    client: TestClient, mock_user_service: AsyncMock, sample_profile_data
+):
+    """Tests successful registration with boundary length inputs."""
+    test_user_id = uuid.uuid4() # Use a fixed UUID for mock consistency
+    base_profile = sample_profile_data.copy()
+    base_profile["id"] = str(test_user_id)
+
+    # Test cases with exact min/max lengths
+    min_user = "u" * 3
+    max_user = "u" * 20
+    min_pass = "p" * 8
+    max_pass = "p" * 32
+    min_name = "n" * 3
+    max_name = "n" * 32
+
+    test_cases = [
+        # Min boundaries
+        {"username": min_user, "password": min_pass, "name": min_name},
+        # Max boundaries
+        {"username": max_user, "password": max_pass, "name": max_name},
+        # Mix min/max
+        {"username": min_user, "password": max_pass, "name": min_name},
+        {"username": max_user, "password": min_pass, "name": max_name},
+    ]
+
+    for payload in test_cases:
+        # Ensure the mock is reset and configured for each case
+        mock_user_service.reset_mock()
+        # Adapt profile data to match request (username, name)
+        profile_data = base_profile.copy()
+        profile_data["username"] = payload["username"]
+        profile_data["name"] = payload["name"]
+        mock_user_service.register.return_value = Profile(**profile_data)
+
+        response = client.post("/api/auth/register", json=payload)
+
+        assert response.status_code == status.HTTP_200_OK
+        # Basic check that registration seems to have worked
+        response_data = response.json()
+        assert response_data["username"] == payload["username"]
+        assert response_data["name"] == payload["name"]
+        mock_user_service.register.assert_awaited_once()
+
+
 def test_register_username_exists(
     client: TestClient, mock_user_service: AsyncMock
 ):
@@ -155,28 +200,37 @@ def test_register_username_exists(
 
 
 def test_register_validation_error(client: TestClient):
-    # Test cases hitting boundaries
-    valid_min_user = "abc"
-    valid_min_pass = "abcdefgh"
-    valid_min_name = "def"
-    invalid_short_user = "ab"
-    invalid_short_pass = "abcdefg"
-    invalid_short_name = "de"
-    # Potentially add tests for max length if needed
-    # valid_max_user = "a" * 20
-    # invalid_long_user = "a" * 21
+    # Min lengths
+    valid_min_user = "u" * 3
+    valid_min_pass = "p" * 8
+    valid_min_name = "n" * 3
+    # Max lengths
+    valid_max_user = "u" * 20
+    valid_max_pass = "p" * 32
+    valid_max_name = "n" * 32
+
+    # Invalid lengths
+    invalid_short_user = "u" * (3 - 1)
+    invalid_short_pass = "p" * (8 - 1)
+    invalid_short_name = "n" * (3 - 1)
+    invalid_long_user = "u" * (20 + 1)
+    invalid_long_pass = "p" * (32 + 1)
+    invalid_long_name = "n" * (32 + 1)
 
     test_cases = [
+        # Too short
         ({"username": invalid_short_user, "password": valid_min_pass, "name": valid_min_name}, 422),
         ({"username": valid_min_user, "password": invalid_short_pass, "name": valid_min_name}, 422),
         ({"username": valid_min_user, "password": valid_min_pass, "name": invalid_short_name}, 422),
-        # Original test case
-        ({"username": "us", "password": "pass", "name": "Te"}, 422),
+        # Too long
+        ({"username": invalid_long_user, "password": valid_min_pass, "name": valid_min_name}, 422),
+        ({"username": valid_min_user, "password": invalid_long_pass, "name": valid_min_name}, 422),
+        ({"username": valid_min_user, "password": valid_min_pass, "name": invalid_long_name}, 422),
     ]
 
     for payload, expected_status in test_cases:
         response = client.post("/api/auth/register", json=payload)
-        assert response.status_code == expected_status
+        assert response.status_code == expected_status, f"Failed for payload: {payload}"
 
 
 def test_login_success(client: TestClient, mock_user_service: AsyncMock):
@@ -194,6 +248,44 @@ def test_login_success(client: TestClient, mock_user_service: AsyncMock):
     assert isinstance(response_data["access_token"], str)
     assert isinstance(response_data["refresh_token"], str)
     mock_user_service.login.assert_awaited_once()
+
+
+def test_login_success_boundaries(
+    client: TestClient, mock_user_service: AsyncMock
+):
+    """Tests successful login with boundary length inputs."""
+    login_response_data = {
+        "access_token": "fake_access_token_boundary",
+        "refresh_token": "fake_refresh_token_boundary",
+    }
+
+    # Test cases with exact min/max lengths
+    min_user = "u" * 3
+    max_user = "u" * 20
+    min_pass = "p" * 8
+    max_pass = "p" * 32
+
+    test_cases = [
+        # Min boundaries
+        {"username": min_user, "password": min_pass},
+        # Max boundaries
+        {"username": max_user, "password": max_pass},
+        # Mix min/max
+        {"username": min_user, "password": max_pass},
+        {"username": max_user, "password": min_pass},
+    ]
+
+    for payload in test_cases:
+        mock_user_service.reset_mock()
+        mock_user_service.login.return_value = LoginResponse(**login_response_data)
+
+        response = client.post("/api/auth/login", json=payload)
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()
+        assert isinstance(response_data["access_token"], str)
+        assert isinstance(response_data["refresh_token"], str)
+        mock_user_service.login.assert_awaited_once()
 
 
 def test_login_unauthorized(client: TestClient, mock_user_service: AsyncMock):
@@ -403,18 +495,27 @@ def test_update_profile_unauthorized(client: TestClient, override_dependencies):
 
 # Add test for login validation errors
 def test_login_validation_error(client: TestClient):
-    # Test cases hitting boundaries
-    valid_min_user = "usr"
-    valid_min_pass = "securep1"
-    invalid_short_user = "us"
-    invalid_short_pass = "secure7"
-    # Potentially add tests for max length
+    # Min/Max lengths
+    valid_min_user = "u" * 3
+    valid_min_pass = "p" * 8
+    valid_max_user = "u" * 20
+    valid_max_pass = "p" * 32
+
+    # Invalid lengths
+    invalid_short_user = "u" * (3 - 1)
+    invalid_short_pass = "p" * (8 - 1)
+    invalid_long_user = "u" * (20 + 1)
+    invalid_long_pass = "p" * (32 + 1)
 
     test_cases = [
+        # Too short
         ({"username": invalid_short_user, "password": valid_min_pass}, 422),
         ({"username": valid_min_user, "password": invalid_short_pass}, 422),
+        # Too long
+        ({"username": invalid_long_user, "password": valid_min_pass}, 422),
+        ({"username": valid_min_user, "password": invalid_long_pass}, 422),
     ]
 
     for payload, expected_status in test_cases:
         response = client.post("/api/auth/login", json=payload)
-        assert response.status_code == expected_status
+        assert response.status_code == expected_status, f"Failed for payload: {payload}"
