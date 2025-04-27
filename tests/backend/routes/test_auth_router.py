@@ -248,7 +248,7 @@ def test_change_password_success(
         "/api/auth/password", json=password_payload, headers=headers
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() is None
+    assert response.content == b""
     mock_user_service.change_password.assert_awaited_once()
     call_args = mock_user_service.change_password.call_args[0]
     assert call_args[0] == user_id
@@ -271,6 +271,7 @@ def test_change_password_incorrect_old(
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Incorrect old password"}
+    mock_user_service.change_password.assert_awaited_once()
 
 
 def test_change_password_validation_error(
@@ -292,6 +293,7 @@ def test_update_profile_success(
     mock_user_service: AsyncMock,
     sample_profile_data,
     override_dependencies,
+    mocker,
 ):
     user_id = override_dependencies
     updated_profile_data = sample_profile_data.copy()
@@ -326,3 +328,10 @@ def test_update_profile_validation_error(
         "/api/auth/profile", json=profile_payload, headers=headers
     )
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_update_profile_unauthorized(client: TestClient, override_dependencies):
+    update_payload = {"name": "Updated Name"}
+    response = client.put("/api/auth/profile", json=update_payload)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Invalid or expired access token"}
