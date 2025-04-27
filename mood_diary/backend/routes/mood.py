@@ -10,7 +10,6 @@ from mood_diary.backend.routes.dependencies import (
 from mood_diary.backend.services.mood import MoodService
 from mood_diary.common.api.schemas.mood import (
     CreateMoodStampRequest,
-    GetMoodStampRequest,
     GetManyMoodStampsRequest,
     UpdateMoodStampRequest,
     MoodStampSchema,
@@ -41,11 +40,11 @@ router = APIRouter()
     },
 )
 async def create(
-    user_id: UUID,
-    request: CreateMoodStampRequest,
-    service: MoodService = Depends(get_mood_service),
+        user_id: UUID,
+        request: CreateMoodStampRequest,
+        service: MoodService = Depends(get_mood_service),
 ):
-    return await service.create(request)
+    return await service.create(user_id=user_id, body=request)
 
 
 @router.get(
@@ -69,12 +68,11 @@ async def create(
     },
 )
 async def get_moodstamp(
-    date: date = Path(...),
-    user_id: UUID = Depends(get_current_user_id),
-    service: MoodService = Depends(get_mood_service),
+        date: date = Path(...),
+        user_id: UUID = Depends(get_current_user_id),
+        service: MoodService = Depends(get_mood_service),
 ):
-    request = GetMoodStampRequest(user_id=user_id, date=date)
-    return await service.get(request)
+    return await service.get(user_id=user_id, date=date)
 
 
 @router.get(
@@ -98,19 +96,18 @@ async def get_moodstamp(
     },
 )
 async def get_many_moodstamps(
-    start_date: date,
-    end_date: date,
-    value: int | None = None,
-    user_id: UUID = Depends(get_current_user_id),
-    service: MoodService = Depends(get_mood_service),
+        start_date: date | None = None,
+        end_date: date | None = None,
+        value: int | None = None,
+        user_id: UUID = Depends(get_current_user_id),
+        service: MoodService = Depends(get_mood_service),
 ):
     request = GetManyMoodStampsRequest(
-        user_id=user_id,
         start_date=start_date,
         end_date=end_date,
         value=value,
     )
-    return await service.get_many(request)
+    return await service.get_many(user_id=user_id, body=request)
 
 
 @router.put(
@@ -141,18 +138,16 @@ async def get_many_moodstamps(
     },
 )
 async def update_moodstamp(
-    date: date = Path(...),
-    request: UpdateMoodStampRequest = Depends(),
-    user_id: UUID = Depends(get_current_user_id),
-    service: MoodService = Depends(get_mood_service),
+        date: date = Path(...),
+        request: UpdateMoodStampRequest = Depends(),
+        user_id: UUID = Depends(get_current_user_id),
+        service: MoodService = Depends(get_mood_service),
 ):
     request_data = UpdateMoodStampRequest(
-        user_id=user_id,
-        date=date,
         value=request.value,
         note=request.note,
     )
-    return await service.update(request_data)
+    return await service.update(user_id=user_id, date=date, body=request_data)
 
 
 @router.delete(
@@ -172,9 +167,8 @@ async def update_moodstamp(
     },
 )
 async def delete_moodstamp(
-    date: date = Path(...),
-    user_id: UUID = Depends(get_current_user_id),
-    service: MoodService = Depends(get_mood_service),
+        date: date = Path(...),
+        user_id: UUID = Depends(get_current_user_id),
+        service: MoodService = Depends(get_mood_service),
 ):
-    request = GetMoodStampRequest(user_id=user_id, date=date)
-    return await service.delete(request)
+    return await service.delete(user_id=user_id, date=date)
