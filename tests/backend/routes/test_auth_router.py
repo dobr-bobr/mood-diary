@@ -346,6 +346,23 @@ def test_refresh_token_unauthorized(
     assert response.json() == {"detail": "Invalid or expired refresh token"}
 
 
+def test_refresh_success_boundaries(client: TestClient, mock_user_service: AsyncMock):
+    """Test successful refresh with boundary length inputs."""
+    refresh_response_data = {"access_token": "new_fake_access_token_boundary"}
+    mock_user_service.refresh.return_value = RefreshResponse(**refresh_response_data)
+
+    # Test with min_length=1
+    min_len_token = "a"
+    payload = {"refresh_token": min_len_token}
+
+    response = client.post("/api/auth/refresh", json=payload)
+
+    assert response.status_code == status.HTTP_200_OK
+    response_data = response.json()
+    assert isinstance(response_data["access_token"], str)
+    mock_user_service.refresh.assert_awaited_once()
+
+
 def test_refresh_validation_error(client: TestClient):
     """Tests validation errors for the refresh token endpoint."""
     test_cases = [
@@ -403,86 +420,6 @@ def test_get_profile_unauthorized(client: TestClient, override_dependencies):
     assert response.json() == {"detail": "Invalid or expired access token"}
 
 
-def test_change_password_success(
-    client: TestClient, mock_user_service: AsyncMock, override_dependencies
-):
-    user_id = override_dependencies
-    mock_user_service.change_password.return_value = None
-    password_payload = {
-        "old_password": "oldPass123",
-        "new_password": "newPass456!",
-    }
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.put(
-        "/api/auth/password", json=password_payload, headers=headers
-    )
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() is None
-    mock_user_service.change_password.assert_awaited_once()
-    call_args = mock_user_service.change_password.call_args[0]
-    assert call_args[0] == user_id
-    assert call_args[1].old_password == "oldPass123"
-    assert call_args[1].new_password == "newPass456!"
-
-
-def test_change_password_incorrect_old(
-    client: TestClient, mock_user_service: AsyncMock, override_dependencies
-):
-    user_id = override_dependencies
-    mock_user_service.change_password.side_effect = IncorrectOldPassword()
-    password_payload = {
-        "old_password": "wrongOldPass",
-        "new_password": "newPass456!",
-    }
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.put(
-        "/api/auth/password", json=password_payload, headers=headers
-    )
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Incorrect old password"}
-    mock_user_service.change_password.assert_awaited_once()
-
-
-def test_change_password_validation_error(
-    client: TestClient, override_dependencies
-):
-    # Min/Max lengths
-    min_pass = "p" * 8
-    max_pass = "p" * 32
-
-    # Invalid lengths
-    invalid_short_pass = "p" * (8 - 1)
-    invalid_long_pass = "p" * (32 + 1)
-
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-
-    test_cases = [
-        # Old password too short
-        ({"old_password": invalid_short_pass, "new_password": min_pass}, 422),
-        # New password too short
-        ({"old_password": min_pass, "new_password": invalid_short_pass}, 422),
-        # Old password too long
-        ({"old_password": invalid_long_pass, "new_password": min_pass}, 422),
-        # New password too long
-        ({"old_password": min_pass, "new_password": invalid_long_pass}, 422),
-        # Original case (new password too short)
-        ({"old_password": "ValidOld1", "new_password": "short"}, 422),
-        # Missing fields
-        ({"new_password": min_pass}, 422),
-        ({"old_password": min_pass}, 422),
-        ({}, 422),
-        # Null fields
-        ({"old_password": None, "new_password": min_pass}, 422),
-        ({"old_password": min_pass, "new_password": None}, 422),
-    ]
-
-    for payload, expected_status in test_cases:
-        response = client.put(
-            "/api/auth/password", json=payload, headers=headers
-        )
-        assert response.status_code == expected_status, f"Failed for payload: {payload}"
-
-
 def test_update_profile_success(
     client: TestClient,
     mock_user_service: AsyncMock,
@@ -515,6 +452,46 @@ def test_update_profile_success(
     call_args = mock_user_service.update_profile.call_args[0]
     assert call_args[0] == user_id
     assert call_args[1].name == new_name
+
+
+def test_update_profile_success_boundaries(
+    client: TestClient,
+    mock_user_service: AsyncMock,
+    sample_profile_data,
+    override_dependencies,
+):
+    """Tests successful profile update with boundary length inputs."""
+    user_id = override_dependencies
+    headers = {"Authorization": "Bearer valid.token.for.test"}
+    base_profile = sample_profile_data.copy()
+    base_profile["id"] = str(user_id) # Use the actual user_id
+
+    # Min/Max lengths
+    min_name = "n" * 3
+    max_name = "n" * 32
+
+    test_cases = [
+        {"name": min_name},
+        {"name": max_name},
+    ]
+
+    for payload in test_cases:
+        mock_user_service.reset_mock()
+        # Adapt profile data to match request
+        profile_data = base_profile.copy()
+        profile_data["name"] = payload["name"]
+        # Ensure updated_at is handled if mock needs it
+        profile_data["updated_at"] = datetime.now(timezone.utc)
+        mock_user_service.update_profile.return_value = Profile(**profile_data)
+
+        response = client.put(
+            "/api/auth/profile", json=payload, headers=headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        response_data = response.json()
+        assert response_data["name"] == payload["name"] # Check name updated
+        mock_user_service.update_profile.assert_awaited_once()
 
 
 def test_update_profile_validation_error(
@@ -582,4 +559,118 @@ def test_login_validation_error(client: TestClient):
 
     for payload, expected_status in test_cases:
         response = client.post("/api/auth/login", json=payload)
+        assert response.status_code == expected_status, f"Failed for payload: {payload}"
+
+
+def test_change_password_success(
+    client: TestClient, mock_user_service: AsyncMock, override_dependencies
+):
+    user_id = override_dependencies
+    mock_user_service.change_password.return_value = None
+    password_payload = {
+        "old_password": "oldPass123",
+        "new_password": "newPass456!",
+    }
+    headers = {"Authorization": "Bearer valid.token.for.test"}
+    response = client.put(
+        "/api/auth/password", json=password_payload, headers=headers
+    )
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() is None
+    mock_user_service.change_password.assert_awaited_once()
+    call_args = mock_user_service.change_password.call_args[0]
+    assert call_args[0] == user_id
+    assert call_args[1].old_password == "oldPass123"
+    assert call_args[1].new_password == "newPass456!"
+
+
+def test_change_password_success_boundaries(
+    client: TestClient, mock_user_service: AsyncMock, override_dependencies
+):
+    """Tests successful password change with boundary length inputs."""
+    user_id = override_dependencies
+    headers = {"Authorization": "Bearer valid.token.for.test"}
+
+    # Min/Max lengths
+    min_pass = "p" * 8
+    max_pass = "p" * 32
+
+    test_cases = [
+        # Min boundaries
+        {"old_password": min_pass, "new_password": min_pass},
+        # Max boundaries
+        {"old_password": max_pass, "new_password": max_pass},
+        # Mix min/max
+        {"old_password": min_pass, "new_password": max_pass},
+        {"old_password": max_pass, "new_password": min_pass},
+    ]
+
+    for payload in test_cases:
+        mock_user_service.reset_mock()
+        mock_user_service.change_password.return_value = None # Success returns None
+
+        response = client.put(
+            "/api/auth/password", json=payload, headers=headers
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json() is None # Check for null JSON response
+        mock_user_service.change_password.assert_awaited_once()
+
+
+def test_change_password_incorrect_old(
+    client: TestClient, mock_user_service: AsyncMock, override_dependencies
+):
+    user_id = override_dependencies
+    mock_user_service.change_password.side_effect = IncorrectOldPassword()
+    password_payload = {
+        "old_password": "wrongOldPass",
+        "new_password": "newPass456!",
+    }
+    headers = {"Authorization": "Bearer valid.token.for.test"}
+    response = client.put(
+        "/api/auth/password", json=password_payload, headers=headers
+    )
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Incorrect old password"}
+    mock_user_service.change_password.assert_awaited_once()
+
+
+def test_change_password_validation_error(
+    client: TestClient, override_dependencies
+):
+    # Min/Max lengths
+    min_pass = "p" * 8
+    max_pass = "p" * 32
+
+    # Invalid lengths
+    invalid_short_pass = "p" * (8 - 1)
+    invalid_long_pass = "p" * (32 + 1)
+
+    headers = {"Authorization": "Bearer valid.token.for.test"}
+
+    test_cases = [
+        # Old password too short
+        ({"old_password": invalid_short_pass, "new_password": min_pass}, 422),
+        # New password too short
+        ({"old_password": min_pass, "new_password": invalid_short_pass}, 422),
+        # Old password too long
+        ({"old_password": invalid_long_pass, "new_password": min_pass}, 422),
+        # New password too long
+        ({"old_password": min_pass, "new_password": invalid_long_pass}, 422),
+        # Original case (new password too short)
+        ({"old_password": "ValidOld1", "new_password": "short"}, 422),
+        # Missing fields
+        ({"new_password": min_pass}, 422),
+        ({"old_password": min_pass}, 422),
+        ({}, 422),
+        # Null fields
+        ({"old_password": None, "new_password": min_pass}, 422),
+        ({"old_password": min_pass, "new_password": None}, 422),
+    ]
+
+    for payload, expected_status in test_cases:
+        response = client.put(
+            "/api/auth/password", json=payload, headers=headers
+        )
         assert response.status_code == expected_status, f"Failed for payload: {payload}"
