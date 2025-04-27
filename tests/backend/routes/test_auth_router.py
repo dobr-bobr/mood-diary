@@ -101,6 +101,15 @@ def sample_profile_data():
     }
 
 
+# Helper to check datetime strings
+def is_iso_datetime_z(dt_str: str) -> bool:
+    try:
+        dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
+        return dt.tzinfo == timezone.utc
+    except (ValueError, TypeError):
+        return False
+
+
 def test_register_success(
     client: TestClient, mock_user_service: AsyncMock, sample_profile_data
 ):
@@ -112,7 +121,22 @@ def test_register_success(
     }
     response = client.post("/api/auth/register", json=register_payload)
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == sample_profile_data
+    response_data = response.json()
+    assert response_data["username"] == sample_profile_data["username"]
+    assert response_data["name"] == sample_profile_data["name"]
+    # Check Profile response types and format
+    assert isinstance(response_data["id"], str)
+    try:
+        uuid.UUID(response_data["id"])
+    except ValueError:
+        pytest.fail(f"Invalid UUID format for id: {response_data['id']}")
+    assert isinstance(response_data["created_at"], str)
+    assert is_iso_datetime_z(response_data["created_at"])
+    assert isinstance(response_data["updated_at"], str)
+    assert is_iso_datetime_z(response_data["updated_at"])
+    assert isinstance(response_data["password_updated_at"], str)
+    assert is_iso_datetime_z(response_data["password_updated_at"])
+
     mock_user_service.register.assert_awaited_once()
 
 
@@ -131,13 +155,28 @@ def test_register_username_exists(
 
 
 def test_register_validation_error(client: TestClient):
-    register_payload = {
-        "username": "us",
-        "password": "pass",
-        "name": "Te",
-    }
-    response = client.post("/api/auth/register", json=register_payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    # Test cases hitting boundaries
+    valid_min_user = "abc"
+    valid_min_pass = "abcdefgh"
+    valid_min_name = "def"
+    invalid_short_user = "ab"
+    invalid_short_pass = "abcdefg"
+    invalid_short_name = "de"
+    # Potentially add tests for max length if needed
+    # valid_max_user = "a" * 20
+    # invalid_long_user = "a" * 21
+
+    test_cases = [
+        ({"username": invalid_short_user, "password": valid_min_pass, "name": valid_min_name}, 422),
+        ({"username": valid_min_user, "password": invalid_short_pass, "name": valid_min_name}, 422),
+        ({"username": valid_min_user, "password": valid_min_pass, "name": invalid_short_name}, 422),
+        # Original test case
+        ({"username": "us", "password": "pass", "name": "Te"}, 422),
+    ]
+
+    for payload, expected_status in test_cases:
+        response = client.post("/api/auth/register", json=payload)
+        assert response.status_code == expected_status
 
 
 def test_login_success(client: TestClient, mock_user_service: AsyncMock):
@@ -149,7 +188,11 @@ def test_login_success(client: TestClient, mock_user_service: AsyncMock):
     login_payload = {"username": "testuser", "password": "password123"}
     response = client.post("/api/auth/login", json=login_payload)
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == login_response_data
+    response_data = response.json()
+    assert response_data == login_response_data
+    # Check LoginResponse types
+    assert isinstance(response_data["access_token"], str)
+    assert isinstance(response_data["refresh_token"], str)
     mock_user_service.login.assert_awaited_once()
 
 
@@ -222,7 +265,27 @@ def test_get_profile_success(
     headers = {"Authorization": "Bearer valid.token.for.test"}
     response = client.get("/api/auth/profile", headers=headers)
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == sample_profile_data
+    response_data = response.json()
+    # Check Profile response types and format
+    assert isinstance(response_data["id"], str)
+    try:
+        uuid.UUID(response_data["id"])
+    except ValueError:
+        pytest.fail(f"Invalid UUID format for id: {response_data['id']}")
+    assert isinstance(response_data["username"], str)
+    assert isinstance(response_data["name"], str)
+    assert isinstance(response_data["created_at"], str)
+    assert is_iso_datetime_z(response_data["created_at"])
+    assert isinstance(response_data["updated_at"], str)
+    assert is_iso_datetime_z(response_data["updated_at"])
+    assert isinstance(response_data["password_updated_at"], str)
+    assert is_iso_datetime_z(response_data["password_updated_at"])
+
+    # Compare main values
+    assert response_data["id"] == sample_profile_data["id"]
+    assert response_data["username"] == sample_profile_data["username"]
+    assert response_data["name"] == sample_profile_data["name"]
+
     mock_user_service.get_profile.assert_awaited_once_with(user_id)
 
 
@@ -336,3 +399,22 @@ def test_update_profile_unauthorized(client: TestClient, override_dependencies):
     response = client.put("/api/auth/profile", json=update_payload)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid or expired access token"}
+
+
+# Add test for login validation errors
+def test_login_validation_error(client: TestClient):
+    # Test cases hitting boundaries
+    valid_min_user = "usr"
+    valid_min_pass = "securep1"
+    invalid_short_user = "us"
+    invalid_short_pass = "secure7"
+    # Potentially add tests for max length
+
+    test_cases = [
+        ({"username": invalid_short_user, "password": valid_min_pass}, 422),
+        ({"username": valid_min_user, "password": invalid_short_pass}, 422),
+    ]
+
+    for payload, expected_status in test_cases:
+        response = client.post("/api/auth/login", json=payload)
+        assert response.status_code == expected_status
