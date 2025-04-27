@@ -2,17 +2,15 @@ import streamlit as st
 import requests
 import extra_streamlit_components as stx
 
-cookie_manager = stx.CookieManager()
-cookies = cookie_manager.get_all()
+from shared.helper.cookie_manager import get_cookie_manager
 
-try:
-    st.write(cookies);
-    ACCESS_TOKEN = cookies.get('access')
+cookie_manager = get_cookie_manager()
 
-    if not ACCESS_TOKEN:
-        raise Exception()
-except Exception:
+ACCESS_TOKEN = cookie_manager.get_all(key="auth_get_all").get("access")
+
+if not ACCESS_TOKEN:
     st.switch_page('pages/authorization.py')
+    st.stop()
 
 st.title("Hello!")
 

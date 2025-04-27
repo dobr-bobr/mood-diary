@@ -1,6 +1,7 @@
 import streamlit as st
 import requests
 from shared.helper.check_passwords import compare_passwords
+import time
 
 st.set_page_config(page_title="Registration", layout="centered", initial_sidebar_state="collapsed")
 
@@ -32,7 +33,7 @@ with st.form("my_form", enter_to_submit=False):
   name = st.text_input('Name', key="name")
 
 
-  is_submited = st.form_submit_button('Register')
+  is_submitted = st.form_submit_button('Register')
 
   auth_link = st.form_submit_button("Have an account?", help="Redirect to Login page", 
                                          type="secondary")
@@ -43,8 +44,13 @@ with st.form("my_form", enter_to_submit=False):
   if auth_link:
     st.switch_page('pages/authorization.py')
 
-  if is_submited:
+  if is_submitted:
     if username and password and confirm_password:
+      if compare_passwords(password, confirm_password):
         register()
+        time.sleep(1)
+        st.switch_page('main.py')
+      else:
+        st.error("Password and confirm password should be the same")
     else:
       st.error("All fields must be filled in")
