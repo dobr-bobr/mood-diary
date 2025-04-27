@@ -3,7 +3,7 @@ from datetime import datetime, date
 from typing import List, Union
 from uuid import UUID, uuid4
 
-from mood_diary.backend.exceptions.mood import MoodStampAlreadyExists, MoodStampAlreadyExistsErrorRepo
+from mood_diary.backend.exceptions.mood import MoodStampAlreadyExistsErrorRepo
 from mood_diary.backend.repositories.mood import MoodStampRepository
 from mood_diary.backend.repositories.sсhemas.mood import (
     MoodStamp,
