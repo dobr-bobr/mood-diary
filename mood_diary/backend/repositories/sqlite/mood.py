@@ -1,6 +1,7 @@
 from datetime import datetime, date
 from uuid import UUID, uuid4
 
+from mood_diary.backend.exceptions.mood import MoodStampAlreadyExists
 from mood_diary.backend.repositories.mood import MoodStampRepository
 from mood_diary.backend.repositories.sсhemas.mood import (
     MoodStamp,
@@ -31,7 +32,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         )
         self.connection.commit()
 
-    async def get(self, date: date, user_id: UUID) -> MoodStamp | None:
+    async def get(self, user_id: UUID, date: date) -> MoodStamp | None:
         cursor = self.connection.cursor()
         cursor.execute(
             "SELECT * FROM moodStamps WHERE date = ? AND user_id = ?",
@@ -51,14 +52,16 @@ class SQLiteMoodRepository(MoodStampRepository):
             )
         return None
 
-    async def get_many(self, body: MoodStampFilter) -> list[MoodStamp] | None:
+    async def get_many(
+            self, user_id: UUID, body: MoodStampFilter
+    ) -> list[MoodStamp] | None:
         cursor = self.connection.cursor()
         query = "SELECT * FROM moodStamps WHERE 1=1"
         params: list[str | date | int] = []
 
         if body.user_id is not None:
             query += " AND user_id = ?"
-            params.append(str(body.user_id))
+            params.append(str(user_id))
         if body.start_date is not None:
             query += " AND date >= ?"
             params.append(body.start_date)
@@ -85,7 +88,9 @@ class SQLiteMoodRepository(MoodStampRepository):
             for row in rows
         ]
 
-    async def create(self, body: CreateMoodStamp) -> MoodStamp | None:
+    async def create(
+            self, user_id: UUID, body: CreateMoodStamp
+    ) -> MoodStamp | None:
         """
         Create new moodstamp.
         Returns None if moodstamp with the same entry date already exists
@@ -95,10 +100,10 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         cursor.execute(
             "SELECT id FROM moodStamps WHERE user_id = ? AND date = ?",
-            (str(body.user_id), body.date),
+            (str(user_id), body.date),
         )
         if cursor.fetchone():
-            return None  # MoodStamp already exists
+            raise MoodStampAlreadyExists()
 
         stamp_id = uuid4()
         created_at = updated_at = datetime.now()
@@ -109,7 +114,7 @@ class SQLiteMoodRepository(MoodStampRepository):
             VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
                 str(stamp_id),
-                str(body.user_id),
+                str(user_id),
                 body.date,
                 body.value,
                 body.note,
@@ -130,7 +135,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         )
 
     async def update(
-        self, date: date, user_id: UUID, body: UpdateMoodStamp
+            self, user_id: UUID, date: date, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """Update moodstamp by date. Returns None if moodstamp not found"""
         cursor = self.connection.cursor()
@@ -176,7 +181,9 @@ class SQLiteMoodRepository(MoodStampRepository):
             updated_at=updated_at,
         )
 
-    async def delete(self, date: date, user_id: UUID) -> MoodStamp | None:
+    async def delete(
+            self, user_id: UUID, date: date
+    ) -> MoodStamp | None:
         """Delete moodstamp by date. Returns None if stamp not found"""
         cursor = self.connection.cursor()
 

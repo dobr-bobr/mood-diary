@@ -3,7 +3,7 @@ from fastapi import status
 from mood_diary.backend.exceptions.base import BaseApplicationException
 
 
-class MoodStampAlreadyExist(BaseApplicationException):
+class MoodStampAlreadyExists(BaseApplicationException):
     def __init__(self):
         super().__init__(
             "MoodStamp already exists", status.HTTP_400_BAD_REQUEST
@@ -27,3 +27,7 @@ class IncorrectMoodValue(BaseApplicationException):
         super().__init__(
             "MoodValue in wrong format", status.HTTP_422_UNPROCESSABLE_ENTITY
         )
+
+
+class MoodStampAlreadyExistsErrorRepo(Exception):
+    pass

@@ -21,7 +21,7 @@ router = APIRouter()
 
 
 @router.post(
-    "/moodstamp/",
+    "/",
     response_model=MoodStampSchema,
     status_code=status.HTTP_200_OK,
     responses={
@@ -41,6 +41,7 @@ router = APIRouter()
     },
 )
 async def create(
+    user_id: UUID,
     request: CreateMoodStampRequest,
     service: MoodService = Depends(get_mood_service),
 ):
@@ -48,7 +49,7 @@ async def create(
 
 
 @router.get(
-    "/moodstamp/{date}",
+    "/{date}",
     response_model=MoodStampSchema,
     status_code=status.HTTP_200_OK,
     responses={

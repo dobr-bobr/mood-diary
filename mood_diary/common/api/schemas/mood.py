@@ -15,26 +15,17 @@ class MoodStampSchema(BaseModel):
 
 
 class CreateMoodStampRequest(BaseModel):
-    user_id: UUID
     date: date
-    value: int = Field(..., max_digits=2)
-    note: str | None = None
+    value: int = Field(..., ge=1, le=10)
+    note: str
 
 
 class UpdateMoodStampRequest(BaseModel):
-    user_id: UUID
-    date: date
     value: int | None = None
     note: str | None = None
 
 
-class GetMoodStampRequest(BaseModel):
-    user_id: UUID
-    date: date
-
-
 class GetManyMoodStampsRequest(BaseModel):
-    user_id: UUID
-    start_date: date
-    end_date: date
-    value: int
+    start_date: date | None = None
+    end_date: date | None = None
+    value: int | None = None

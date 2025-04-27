@@ -1,8 +1,11 @@
 from typing import List
+from uuid import UUID
+from datetime import date
 
 from mood_diary.backend.exceptions.mood import (
-    MoodStampAlreadyExist,
+    MoodStampAlreadyExists,
     MoodStampNotExist,
+    MoodStampAlreadyExistsErrorRepo,
 )
 from mood_diary.backend.repositories.mood import MoodStampRepository
 from mood_diary.backend.repositories.sсhemas.mood import (
@@ -14,7 +17,6 @@ from mood_diary.backend.repositories.sсhemas.mood import (
 from mood_diary.common.api.schemas.mood import (
     CreateMoodStampRequest,
     UpdateMoodStampRequest,
-    GetMoodStampRequest,
     GetManyMoodStampsRequest,
 )
 
@@ -23,18 +25,22 @@ class MoodService:
     def __init__(self, moodstamp_repository: MoodStampRepository):
         self.moodstamp_repository = moodstamp_repository
 
-    async def create(self, body: CreateMoodStampRequest) -> MoodStamp:
+    async def create(
+            self, user_id: UUID, body: CreateMoodStampRequest
+    ) -> MoodStamp:
         create_moodstamp = CreateMoodStamp(
+            user_id=user_id,
             date=body.date,
-            user_id=body.user_id,
             value=body.value,
             note=body.note,
         )
 
-        moodstamp = await self.moodstamp_repository.create(create_moodstamp)
-
-        if moodstamp is None:
-            raise MoodStampAlreadyExist()
+        try:
+            moodstamp = await self.moodstamp_repository.create(
+                user_id=user_id, body=create_moodstamp
+            )
+        except MoodStampAlreadyExistsErrorRepo:
+            raise MoodStampAlreadyExists()
 
         return MoodStamp(
             id=moodstamp.id,
@@ -46,9 +52,9 @@ class MoodService:
             updated_at=moodstamp.updated_at,
         )
 
-    async def get(self, body: GetMoodStampRequest) -> MoodStamp:
+    async def get(self, user_id: UUID, date: date) -> MoodStamp:
         moodstamp = await self.moodstamp_repository.get(
-            user_id=body.user_id, date=body.date
+            user_id=user_id, date=date
         )
 
         if moodstamp is None:
@@ -64,16 +70,17 @@ class MoodService:
             updated_at=moodstamp.updated_at,
         )
 
-    async def update(self, body: UpdateMoodStampRequest) -> MoodStamp:
+    async def update(
+            self, user_id: UUID, date: date, body: UpdateMoodStampRequest
+    ) -> MoodStamp:
         update_moodstamp = UpdateMoodStamp(
-            user_id=body.user_id,
             value=body.value,
             note=body.note,
         )
 
         moodstamp = await self.moodstamp_repository.update(
-            user_id=update_moodstamp.user_id,
-            date=body.date,
+            user_id=user_id,
+            date=date,
             body=update_moodstamp,
         )
 
@@ -91,16 +98,16 @@ class MoodService:
         )
 
     async def get_many(
-        self, body: GetManyMoodStampsRequest
+            self, user_id: UUID, body: GetManyMoodStampsRequest
     ) -> List[MoodStamp]:
         filter = MoodStampFilter(
-            user_id=body.user_id,
             start_date=body.start_date,
             end_date=body.end_date,
             value=body.value,
         )
 
         moodstamps = await self.moodstamp_repository.get_many(
+            user_id=user_id,
             body=filter,
         )
 
@@ -120,10 +127,10 @@ class MoodService:
             for moodstamp in moodstamps
         ]
 
-    async def delete(self, body: GetMoodStampRequest) -> None:
+    async def delete(self, user_id: UUID, date: date) -> None:
         success = await self.moodstamp_repository.delete(
-            user_id=body.user_id,
-            date=body.date,
+            user_id=user_id,
+            date=date,
         )
 
         if not success:

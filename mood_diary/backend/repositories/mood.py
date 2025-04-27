@@ -1,6 +1,5 @@
 from abc import abstractmethod
 from datetime import date
-
 from uuid import UUID
 
 from mood_diary.backend.repositories.base import BaseRepository
@@ -14,7 +13,9 @@ from mood_diary.backend.repositories.sсhemas.mood import (
 
 class MoodStampRepository(BaseRepository):
     @abstractmethod
-    async def get(self, date: date, user_id: UUID) -> MoodStamp | None:
+    async def get(
+            self, user_id: UUID, date: date
+    ) -> MoodStamp | None:
         """
         Get moodstamp by entry date.
         Returns None if stamp not found
@@ -22,7 +23,9 @@ class MoodStampRepository(BaseRepository):
         pass
 
     @abstractmethod
-    async def get_many(self, body: MoodStampFilter) -> list[MoodStamp] | None:
+    async def get_many(
+            self, user_id: UUID, body: MoodStampFilter
+    ) -> list[MoodStamp] | None:
         """
         Get multiple moodstamps based on filter criteria.
         Returns empty list if no stamps found
@@ -30,7 +33,9 @@ class MoodStampRepository(BaseRepository):
         pass
 
     @abstractmethod
-    async def create(self, body: CreateMoodStamp) -> MoodStamp | None:
+    async def create(
+            self, user_id: UUID, body: CreateMoodStamp
+    ) -> MoodStamp | None:
         """
         Create new moodstamp.
         Returns None if moodstamp with the same entry date already exists
@@ -39,7 +44,7 @@ class MoodStampRepository(BaseRepository):
 
     @abstractmethod
     async def update(
-        self, date: date, user_id: UUID, body: UpdateMoodStamp
+            self, date: date, user_id: UUID, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """
         Update moodstamp by date.
@@ -48,7 +53,9 @@ class MoodStampRepository(BaseRepository):
         pass
 
     @abstractmethod
-    async def delete(self, date: date, user_id: UUID) -> MoodStamp | None:
+    async def delete(
+            self, user_id: UUID, date: date
+    ) -> MoodStamp | None:
         """
         Delete moodstamp by date.
         Returns None if moodstamp not found
