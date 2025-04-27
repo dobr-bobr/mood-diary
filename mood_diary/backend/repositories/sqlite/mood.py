@@ -104,7 +104,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         created_at = updated_at = datetime.now()
 
         cursor.execute(
-            """INSERT INTO moodStamps 
+            """INSERT INTO moodStamps
             (id, user_id, date, value, note, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
@@ -153,7 +153,7 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         # Perform the update
         cursor.execute(
-            """UPDATE moodStamps 
+            """UPDATE moodStamps
             SET value = ?, note = ?, updated_at = ?
             WHERE user_id = ? AND date = ?""",
             (
