@@ -346,6 +346,22 @@ def test_refresh_token_unauthorized(
     assert response.json() == {"detail": "Invalid or expired refresh token"}
 
 
+def test_refresh_validation_error(client: TestClient):
+    """Tests validation errors for the refresh token endpoint."""
+    test_cases = [
+        # Empty token (violates min_length=1)
+        ({"refresh_token": ""}, 422),
+        # Missing token field
+        ({}, 422),
+        # Null token field
+        ({"refresh_token": None}, 422),
+    ]
+
+    for payload, expected_status in test_cases:
+        response = client.post("/api/auth/refresh", json=payload)
+        assert response.status_code == expected_status, f"Failed for payload: {payload}"
+
+
 def test_get_profile_success(
     client: TestClient,
     mock_user_service: AsyncMock,
@@ -430,15 +446,41 @@ def test_change_password_incorrect_old(
 def test_change_password_validation_error(
     client: TestClient, override_dependencies
 ):
-    password_payload = {
-        "old_password": "ValidOld1",
-        "new_password": "short",
-    }
+    # Min/Max lengths
+    min_pass = "p" * 8
+    max_pass = "p" * 32
+
+    # Invalid lengths
+    invalid_short_pass = "p" * (8 - 1)
+    invalid_long_pass = "p" * (32 + 1)
+
     headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.put(
-        "/api/auth/password", json=password_payload, headers=headers
-    )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    test_cases = [
+        # Old password too short
+        ({"old_password": invalid_short_pass, "new_password": min_pass}, 422),
+        # New password too short
+        ({"old_password": min_pass, "new_password": invalid_short_pass}, 422),
+        # Old password too long
+        ({"old_password": invalid_long_pass, "new_password": min_pass}, 422),
+        # New password too long
+        ({"old_password": min_pass, "new_password": invalid_long_pass}, 422),
+        # Original case (new password too short)
+        ({"old_password": "ValidOld1", "new_password": "short"}, 422),
+        # Missing fields
+        ({"new_password": min_pass}, 422),
+        ({"old_password": min_pass}, 422),
+        ({}, 422),
+        # Null fields
+        ({"old_password": None, "new_password": min_pass}, 422),
+        ({"old_password": min_pass, "new_password": None}, 422),
+    ]
+
+    for payload, expected_status in test_cases:
+        response = client.put(
+            "/api/auth/password", json=payload, headers=headers
+        )
+        assert response.status_code == expected_status, f"Failed for payload: {payload}"
 
 
 def test_update_profile_success(
@@ -478,12 +520,34 @@ def test_update_profile_success(
 def test_update_profile_validation_error(
     client: TestClient, override_dependencies
 ):
-    profile_payload = {"name": "N"}
+    # Min/Max lengths
+    min_name = "n" * 3
+    max_name = "n" * 32
+
+    # Invalid lengths
+    invalid_short_name = "n" * (3 - 1)
+    invalid_long_name = "n" * (32 + 1)
+
     headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.put(
-        "/api/auth/profile", json=profile_payload, headers=headers
-    )
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+    test_cases = [
+        # Name too short
+        ({"name": invalid_short_name}, 422),
+        # Name too long
+        ({"name": invalid_long_name}, 422),
+        # Original case (name too short)
+        ({"name": "N"}, 422),
+        # Missing field
+        ({}, 422),
+        # Null field
+        ({"name": None}, 422),
+    ]
+
+    for payload, expected_status in test_cases:
+        response = client.put(
+            "/api/auth/profile", json=payload, headers=headers
+        )
+        assert response.status_code == expected_status, f"Failed for payload: {payload}"
 
 
 def test_update_profile_unauthorized(client: TestClient, override_dependencies):
