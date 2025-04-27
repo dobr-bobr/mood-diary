@@ -1,15 +1,13 @@
-import sqlite3
 from datetime import datetime, date
 from uuid import UUID, uuid4
 
+from mood_diary.backend.repositories.mood import MoodStampRepository
 from mood_diary.backend.repositories.sсhemas.mood import (
     MoodStamp,
     CreateMoodStamp,
     UpdateMoodStamp,
     MoodStampFilter,
 )
-
-from mood_diary.backend.repositories.mood import MoodStampRepository
 
 
 class SQLiteMoodRepository(MoodStampRepository):
