@@ -1,7 +1,9 @@
+import sqlite3
 from datetime import datetime, date
+from typing import List, Union
 from uuid import UUID, uuid4
 
-from mood_diary.backend.exceptions.mood import MoodStampAlreadyExists
+from mood_diary.backend.exceptions.mood import MoodStampAlreadyExists, MoodStampAlreadyExistsErrorRepo
 from mood_diary.backend.repositories.mood import MoodStampRepository
 from mood_diary.backend.repositories.sсhemas.mood import (
     MoodStamp,
@@ -14,6 +16,7 @@ from mood_diary.backend.repositories.sсhemas.mood import (
 class SQLiteMoodRepository(MoodStampRepository):
     def __init__(self, connection):
         self.connection = connection
+        self.connection.row_factory = sqlite3.Row
 
     def init_db(self):
         cursor = self.connection.cursor()
@@ -42,26 +45,23 @@ class SQLiteMoodRepository(MoodStampRepository):
         row = cursor.fetchone()
         if row:
             return MoodStamp(
-                id=UUID(row[0]),
-                user_id=row[1],
-                date=row[2],
-                value=row[3],
-                note=row[4],
-                created_at=row[5],
-                updated_at=row[6],
+                id=UUID(row["id"]),
+                user_id=row["user_id"],
+                date=row["date"],
+                value=row["value"],
+                note=row["note"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"],
             )
         return None
 
     async def get_many(
             self, user_id: UUID, body: MoodStampFilter
-    ) -> list[MoodStamp] | None:
+    ) -> List[MoodStamp]:
         cursor = self.connection.cursor()
-        query = "SELECT * FROM moodStamps WHERE 1=1"
-        params: list[str | date | int] = []
+        query = "SELECT * FROM moodStamps WHERE user_id = ?"
+        params: List[Union[str, date, int]] = [str(user_id)]
 
-        if body.user_id is not None:
-            query += " AND user_id = ?"
-            params.append(str(user_id))
         if body.start_date is not None:
             query += " AND date >= ?"
             params.append(body.start_date)
@@ -77,20 +77,20 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         return [
             MoodStamp(
-                id=UUID(row[0]),
-                user_id=row[1],
-                date=row[2],
-                value=row[3],
-                note=row[4],
-                created_at=row[5],
-                updated_at=row[6],
+                id=UUID(row["id"]),
+                user_id=row["user_id"],
+                date=row["date"],
+                value=row["value"],
+                note=row["note"],
+                created_at=row["created_at"],
+                updated_at=row["updated_at"],
             )
             for row in rows
         ]
 
     async def create(
             self, user_id: UUID, body: CreateMoodStamp
-    ) -> MoodStamp | None:
+    ) -> MoodStamp:
         """
         Create new moodstamp.
         Returns None if moodstamp with the same entry date already exists
@@ -103,7 +103,7 @@ class SQLiteMoodRepository(MoodStampRepository):
             (str(user_id), body.date),
         )
         if cursor.fetchone():
-            raise MoodStampAlreadyExists()
+            raise MoodStampAlreadyExistsErrorRepo()
 
         stamp_id = uuid4()
         created_at = updated_at = datetime.now()
@@ -172,12 +172,12 @@ class SQLiteMoodRepository(MoodStampRepository):
         self.connection.commit()
 
         return MoodStamp(
-            id=UUID(row[0]),
+            id=UUID(row["id"]),
             user_id=user_id,
             date=date,
             value=update_values["value"],
             note=update_values["note"],
-            created_at=row[5],
+            created_at=row["created_at"],
             updated_at=updated_at,
         )
 
@@ -204,11 +204,11 @@ class SQLiteMoodRepository(MoodStampRepository):
         self.connection.commit()
 
         return MoodStamp(
-            id=UUID(row[0]),
+            id=UUID(row["id"]),
             user_id=user_id,
             date=date,
-            value=row[3],
-            note=row[4],
-            created_at=row[5],
-            updated_at=row[6],
+            value=row["value"],
+            note=row["note"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
         )

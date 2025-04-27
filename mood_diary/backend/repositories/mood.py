@@ -1,5 +1,6 @@
 from abc import abstractmethod
 from datetime import date
+from typing import List
 from uuid import UUID
 
 from mood_diary.backend.repositories.base import BaseRepository
@@ -25,7 +26,7 @@ class MoodStampRepository(BaseRepository):
     @abstractmethod
     async def get_many(
             self, user_id: UUID, body: MoodStampFilter
-    ) -> list[MoodStamp] | None:
+    ) -> List[MoodStamp]:
         """
         Get multiple moodstamps based on filter criteria.
         Returns empty list if no stamps found
@@ -35,7 +36,7 @@ class MoodStampRepository(BaseRepository):
     @abstractmethod
     async def create(
             self, user_id: UUID, body: CreateMoodStamp
-    ) -> MoodStamp | None:
+    ) -> MoodStamp:
         """
         Create new moodstamp.
         Returns None if moodstamp with the same entry date already exists
@@ -44,7 +45,7 @@ class MoodStampRepository(BaseRepository):
 
     @abstractmethod
     async def update(
-            self, date: date, user_id: UUID, body: UpdateMoodStamp
+            self, user_id: UUID, date: date, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """
         Update moodstamp by date.
