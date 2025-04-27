@@ -13,7 +13,6 @@ from mood_diary.backend.exceptions.user import (
     InvalidOrExpiredAccessToken,
     InvalidOrExpiredRefreshToken,
     UsernameAlreadyExists,
-    UserNotFound,
 )
 from mood_diary.backend.app import get_app
 from mood_diary.backend.routes.dependencies import (
@@ -25,7 +24,6 @@ from mood_diary.backend.services.user import UserService
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
     TokenManager,
-    TokenType,
 )
 from mood_diary.common.api.schemas.auth import (
     LoginResponse,
@@ -248,7 +246,7 @@ def test_change_password_success(
         "/api/auth/password", json=password_payload, headers=headers
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.content == b""
+    assert response.json() is None
     mock_user_service.change_password.assert_awaited_once()
     call_args = mock_user_service.change_password.call_args[0]
     assert call_args[0] == user_id
@@ -293,30 +291,33 @@ def test_update_profile_success(
     mock_user_service: AsyncMock,
     sample_profile_data,
     override_dependencies,
-    mocker,
 ):
     user_id = override_dependencies
     updated_profile_data = sample_profile_data.copy()
-    updated_profile_data["name"] = "New Name"
-    updated_profile_data["updated_at"] = (
-        datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    )
-    mock_user_service.update_profile.return_value = Profile(
-        **updated_profile_data
-    )
+    new_name = "New Name"
+    updated_profile_data["name"] = new_name
+    expected_profile = Profile(**updated_profile_data)
+    mock_user_service.update_profile.return_value = expected_profile
 
-    profile_payload = {"name": "New Name"}
+    profile_payload = {"name": new_name}
     headers = {"Authorization": "Bearer valid.token.for.test"}
     response = client.put(
         "/api/auth/profile", json=profile_payload, headers=headers
     )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == updated_profile_data
+    response_data = response.json()
+    assert response_data["id"] == str(expected_profile.id)
+    assert response_data["username"] == expected_profile.username
+    assert response_data["name"] == expected_profile.name
+    assert response_data["updated_at"] == expected_profile.updated_at.isoformat().replace("+00:00", "Z")
+    assert response_data["created_at"] == expected_profile.created_at.isoformat().replace("+00:00", "Z")
+    assert response_data["password_updated_at"] == expected_profile.password_updated_at.isoformat().replace("+00:00", "Z")
+
     mock_user_service.update_profile.assert_awaited_once()
     call_args = mock_user_service.update_profile.call_args[0]
     assert call_args[0] == user_id
-    assert call_args[1].name == "New Name"
+    assert call_args[1].name == new_name
 
 
 def test_update_profile_validation_error(
