@@ -77,5 +77,5 @@ def test_verify_bytes_password_input(password_hasher: SaltPasswordHasher):
 
 def test_invalid_password_type(password_hasher: SaltPasswordHasher):
     """Test that hashing raises TypeError for invalid password types."""
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="Password must be str or bytes"):
         password_hasher.hash(12345)  # type: ignore
