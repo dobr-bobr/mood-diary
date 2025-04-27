@@ -4,12 +4,17 @@ from datetime import date
 from fastapi import APIRouter, Depends, status, Path
 
 from mood_diary.backend.routes.dependencies import (
-    get_mood_service, get_current_user_id,
+    get_mood_service,
+    get_current_user_id,
 )
 from mood_diary.backend.services.mood import MoodService
 from mood_diary.common.api.schemas.mood import (
-
-    CreateMoodStampRequest, GetMoodStampRequest, GetManyMoodStampsRequest, UpdateMoodStampRequest, MoodStampSchema)
+    CreateMoodStampRequest,
+    GetMoodStampRequest,
+    GetManyMoodStampsRequest,
+    UpdateMoodStampRequest,
+    MoodStampSchema,
+)
 from mood_diary.common.api.schemas.common import MessageResponse
 
 router = APIRouter()
@@ -28,14 +33,16 @@ router = APIRouter()
             "model": MessageResponse,
             "description": "MoodStamp already exists",
             "content": {
-                "application/json": {"example": {"message": "MoodStamp already exists"}}
+                "application/json": {
+                    "example": {"message": "MoodStamp already exists"}
+                }
             },
         },
     },
 )
 async def create(
-        request: CreateMoodStampRequest,
-        service: MoodService = Depends(get_mood_service)
+    request: CreateMoodStampRequest,
+    service: MoodService = Depends(get_mood_service),
 ):
     return await service.create(request)
 
@@ -53,15 +60,17 @@ async def create(
             "model": MessageResponse,
             "description": "MoodStamp not found",
             "content": {
-                "application/json": {"example": {"message": "MoodStamp does not exist"}}
-            }
+                "application/json": {
+                    "example": {"message": "MoodStamp does not exist"}
+                }
+            },
         },
     },
 )
 async def get_moodstamp(
-        date: date = Path(...),
-        user_id: UUID = Depends(get_current_user_id),
-        service: MoodService = Depends(get_mood_service),
+    date: date = Path(...),
+    user_id: UUID = Depends(get_current_user_id),
+    service: MoodService = Depends(get_mood_service),
 ):
     request = GetMoodStampRequest(user_id=user_id, date=date)
     return await service.get(request)
@@ -80,17 +89,19 @@ async def get_moodstamp(
             "model": MessageResponse,
             "description": "MoodStamps not found",
             "content": {
-                "application/json": {"example": {"message": "MoodStamps does not exist"}}
-            }
+                "application/json": {
+                    "example": {"message": "MoodStamps does not exist"}
+                }
+            },
         },
     },
 )
 async def get_many_moodstamps(
-        start_date: date,
-        end_date: date,
-        value: int | None = None,
-        user_id: UUID = Depends(get_current_user_id),
-        service: MoodService = Depends(get_mood_service),
+    start_date: date,
+    end_date: date,
+    value: int | None = None,
+    user_id: UUID = Depends(get_current_user_id),
+    service: MoodService = Depends(get_mood_service),
 ):
     request = GetManyMoodStampsRequest(
         user_id=user_id,
@@ -110,23 +121,29 @@ async def get_many_moodstamps(
             "model": MessageResponse,
             "description": "MoodStamp not found",
             "content": {
-                "application/json": {"example": {"message": "MoodStamp does not exist"}}
-            }
+                "application/json": {
+                    "example": {"message": "MoodStamp does not exist"}
+                }
+            },
         },
         status.HTTP_422_UNPROCESSABLE_ENTITY: {
             "model": MessageResponse,
             "description": "Value/note are in the wrong format.",
             "content": {
-                "application/json": {"example": {"message": "Value/note are in the wrong format."}}
-            }
-        }
+                "application/json": {
+                    "example": {
+                        "message": "Value/note are in the wrong format."
+                    }
+                }
+            },
+        },
     },
 )
 async def update_moodstamp(
-        date: date = Path(...),
-        request: UpdateMoodStampRequest = Depends(),
-        user_id: UUID = Depends(get_current_user_id),
-        service: MoodService = Depends(get_mood_service),
+    date: date = Path(...),
+    request: UpdateMoodStampRequest = Depends(),
+    user_id: UUID = Depends(get_current_user_id),
+    service: MoodService = Depends(get_mood_service),
 ):
     request_data = UpdateMoodStampRequest(
         user_id=user_id,
@@ -146,15 +163,17 @@ async def update_moodstamp(
             "model": MessageResponse,
             "description": "MoodStamp not found",
             "content": {
-                "application/json": {"example": {"message": "MoodStamp does not exist"}}
-            }
+                "application/json": {
+                    "example": {"message": "MoodStamp does not exist"}
+                }
+            },
         },
     },
 )
 async def delete_moodstamp(
-        date: date = Path(...),
-        user_id: UUID = Depends(get_current_user_id),
-        service: MoodService = Depends(get_mood_service),
+    date: date = Path(...),
+    user_id: UUID = Depends(get_current_user_id),
+    service: MoodService = Depends(get_mood_service),
 ):
     request = GetMoodStampRequest(user_id=user_id, date=date)
     return await service.delete(request)

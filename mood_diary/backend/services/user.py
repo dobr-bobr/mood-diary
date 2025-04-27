@@ -68,8 +68,12 @@ class UserService:
             raise IncorrectPasswordOrUserDoesNotExists()
 
         return LoginResponse(
-            access_token=self.token_manager.create_token(TokenType.ACCESS, user.id),
-            refresh_token=self.token_manager.create_token(TokenType.REFRESH, user.id),
+            access_token=self.token_manager.create_token(
+                TokenType.ACCESS, user.id
+            ),
+            refresh_token=self.token_manager.create_token(
+                TokenType.REFRESH, user.id
+            ),
         )
 
     async def refresh(self, body: RefreshRequest) -> RefreshResponse:
@@ -99,13 +103,17 @@ class UserService:
             password_updated_at=user.password_updated_at,
         )
 
-    async def change_password(self, user_id: UUID, body: ChangePasswordRequest) -> None:
+    async def change_password(
+        self, user_id: UUID, body: ChangePasswordRequest
+    ) -> None:
         user = await self.user_repository.get(user_id)
 
         if not user:
             raise UserNotFound()
 
-        if not self.password_hasher.verify(body.old_password, user.hashed_password):
+        if not self.password_hasher.verify(
+            body.old_password, user.hashed_password
+        ):
             raise IncorrectOldPassword()
 
         hashed_password = self.password_hasher.hash(body.new_password)
@@ -129,7 +137,9 @@ class UserService:
 
         update_user = UpdateUserProfile(name=body.name)
 
-        updated_user = await self.user_repository.update_profile(user_id, update_user)
+        updated_user = await self.user_repository.update_profile(
+            user_id, update_user
+        )
 
         if updated_user is None:
             raise UserNotFound()

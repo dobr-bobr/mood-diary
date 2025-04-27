@@ -1,0 +1,28 @@
+name: CI
+
+on: push
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install Poetry
+        uses: abatilo/actions-poetry@v3
+        with:
+          poetry-version: '2'
+      - name: Install dependencies
+        run: poetry install
+      - name: Analyze
+        run: poetry run mypy ./mood_diary
+      - name: Test
+        run: poetry run pytest --cov=mood_diary ./tests/
+      - name: Lint
+        run: poetry run flake8 ./mood_diary --max-complexity 10
+      - name: Bandit check
+        run: poetry run bandit -r . -x ./tests/,./scripts/

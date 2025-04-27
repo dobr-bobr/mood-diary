@@ -1,0 +1,63 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mood_diary_backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["uvicorn", "mood_diary.backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    volumes:
+      - db_data:/app
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mood_diary_frontend
+    restart: unless-stopped
+    env_file:
+      - .env
+    command: ["streamlit", "run", "mood_diary/frontend/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+
+  caddy:
+    image: caddy:2
+    container_name: mood_diary_caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    env_file:
+      - .env
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+      - frontend
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+
+volumes:
+  caddy_data:
+  caddy_config:
+  db_data:

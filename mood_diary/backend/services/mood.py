@@ -1,10 +1,22 @@
 from typing import List
 
-from mood_diary.backend.exceptions.mood import MoodStampAlreadyExist, MoodStampNotExist
+from mood_diary.backend.exceptions.mood import (
+    MoodStampAlreadyExist,
+    MoodStampNotExist,
+)
 from mood_diary.backend.repositories.mood import MoodStampRepository
-from mood_diary.backend.repositories.sсhemas.mood import MoodStamp, CreateMoodStamp, UpdateMoodStamp, MoodStampFilter
-from mood_diary.common.api.schemas.mood import CreateMoodStampRequest, UpdateMoodStampRequest, GetMoodStampRequest, \
-    GetManyMoodStampsRequest
+from mood_diary.backend.repositories.sсhemas.mood import (
+    MoodStamp,
+    CreateMoodStamp,
+    UpdateMoodStamp,
+    MoodStampFilter,
+)
+from mood_diary.common.api.schemas.mood import (
+    CreateMoodStampRequest,
+    UpdateMoodStampRequest,
+    GetMoodStampRequest,
+    GetManyMoodStampsRequest,
+)
 
 
 class MoodService:
@@ -36,8 +48,7 @@ class MoodService:
 
     async def get(self, body: GetMoodStampRequest) -> MoodStamp:
         moodstamp = await self.moodstamp_repository.get(
-            user_id=body.user_id,
-            date=body.date
+            user_id=body.user_id, date=body.date
         )
 
         if moodstamp is None:
@@ -60,9 +71,11 @@ class MoodService:
             note=body.note,
         )
 
-        moodstamp = await self.moodstamp_repository.update(user_id=update_moodstamp.user_id,
-                                                           date=body.date,
-                                                           body=update_moodstamp)
+        moodstamp = await self.moodstamp_repository.update(
+            user_id=update_moodstamp.user_id,
+            date=body.date,
+            body=update_moodstamp,
+        )
 
         if moodstamp is None:
             raise MoodStampNotExist()
@@ -77,7 +90,9 @@ class MoodService:
             updated_at=moodstamp.updated_at,
         )
 
-    async def get_many(self, body: GetManyMoodStampsRequest) -> List[MoodStamp]:
+    async def get_many(
+        self, body: GetManyMoodStampsRequest
+    ) -> List[MoodStamp]:
         filter = MoodStampFilter(
             user_id=body.user_id,
             start_date=body.start_date,
@@ -88,6 +103,9 @@ class MoodService:
         moodstamps = await self.moodstamp_repository.get_many(
             body=filter,
         )
+
+        if moodstamps is None:
+            return []
 
         return [
             MoodStamp(

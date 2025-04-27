@@ -11,10 +11,12 @@ class Settings(BaseSettings):
     PASSWORD_HASHING_SALT_SIZE: int = 16
     PASSWORD_HASHING_SPLIT_CHAR: str = "$"
 
-    AUTH_TOKEN_SECRET_KEY: str
+    AUTH_TOKEN_SECRET_KEY: str = ""
     AUTH_TOKEN_ALGORITHM: str = "HS256"
     AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes
     AUTH_TOKEN_REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
+
+    ROOT_PATH: str = "/api"
 
     SQLITE_DB_PATH: str = "mood_diary.db"
 

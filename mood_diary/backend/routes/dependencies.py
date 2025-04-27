@@ -11,7 +11,10 @@ from mood_diary.backend.repositories.sqlite.user import SQLiteUserRepository
 from mood_diary.backend.repositories.user import UserRepository
 from mood_diary.backend.services.mood import MoodService
 from mood_diary.backend.services.user import UserService
-from mood_diary.backend.utils.password_hasher import SaltPasswordHasher, PasswordHasher
+from mood_diary.backend.utils.password_hasher import (
+    SaltPasswordHasher,
+    PasswordHasher,
+)
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
     TokenManager,
@@ -79,12 +82,16 @@ def get_user_service(
         token_manager=token_manager,
     )
 
+
 def get_moodstamp_repository(
     conn: sqlite3.Connection = Depends(get_connection),
 ) -> MoodStampRepository:
     return SQLiteMoodRepository(conn)
 
+
 def get_mood_service(
-    moodstamp_repository: MoodStampRepository = Depends(get_moodstamp_repository),
+    moodstamp_repository: MoodStampRepository = Depends(
+        get_moodstamp_repository
+    ),
 ) -> MoodService:
     return MoodService(moodstamp_repository)

@@ -66,12 +66,16 @@ class JWTTokenManager(TokenManager):
         )
 
         return jwt.encode(
-            payload.model_dump(mode="json"), self.secret_key, algorithm=self.algorithm
+            payload.model_dump(mode="json"),
+            self.secret_key,
+            algorithm=self.algorithm,
         )
 
     def decode_token(self, token: str) -> TokenPayload | None:
         try:
-            decoded = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
+            decoded = jwt.decode(
+                token, self.secret_key, algorithms=[self.algorithm]
+            )
             decoded["user_id"] = UUID(decoded["user_id"])
             return TokenPayload(**decoded)
         except jwt.ExpiredSignatureError:
@@ -82,6 +86,7 @@ class JWTTokenManager(TokenManager):
             pass
         except Exception as e:
             # TODO: Add logging
+            _ = e
             pass
 
         return None
