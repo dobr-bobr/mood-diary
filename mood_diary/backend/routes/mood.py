@@ -39,8 +39,8 @@ router = APIRouter()
     },
 )
 async def create(
-        user_id: UUID,
         request: CreateMoodStampRequest,
+        user_id: UUID = Depends(get_current_user_id),
         service: MoodService = Depends(get_mood_service),
 ):
     return await service.create(user_id=user_id, body=request)
@@ -75,7 +75,7 @@ async def get_moodstamp(
 
 
 @router.get(
-    "/moodstamp/",
+    "/",
     response_model=list[MoodStampSchema],
     status_code=status.HTTP_200_OK,
     responses={
@@ -110,7 +110,7 @@ async def get_many_moodstamps(
 
 
 @router.put(
-    "/moodstamp/{date}",
+    "/{date}",
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {"description": "MoodStamp updated successfully"},
@@ -137,20 +137,16 @@ async def get_many_moodstamps(
     },
 )
 async def update_moodstamp(
+        request: UpdateMoodStampRequest,
         date: date = Path(...),
-        request: UpdateMoodStampRequest = Depends(),
         user_id: UUID = Depends(get_current_user_id),
         service: MoodService = Depends(get_mood_service),
 ):
-    request_data = UpdateMoodStampRequest(
-        value=request.value,
-        note=request.note,
-    )
-    return await service.update(user_id=user_id, date=date, body=request_data)
+    return await service.update(user_id=user_id, date=date, body=request)
 
 
 @router.delete(
-    "/moodstamp/{date}",
+    "/{date}",
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {"description": "MoodStamp deleted successfully"},
