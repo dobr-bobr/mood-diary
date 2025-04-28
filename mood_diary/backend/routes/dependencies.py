@@ -5,8 +5,11 @@ from fastapi import Header, Depends
 
 from mood_diary.backend.config import config
 from mood_diary.backend.exceptions.user import InvalidOrExpiredAccessToken
+from mood_diary.backend.repositories.mood import MoodStampRepository
+from mood_diary.backend.repositories.sqlite.mood import SQLiteMoodRepository
 from mood_diary.backend.repositories.sqlite.user import SQLiteUserRepository
 from mood_diary.backend.repositories.user import UserRepository
+from mood_diary.backend.services.mood import MoodService
 from mood_diary.backend.services.user import UserService
 from mood_diary.backend.utils.password_hasher import (
     SaltPasswordHasher,
@@ -78,3 +81,17 @@ def get_user_service(
         password_hasher=password_hasher,
         token_manager=token_manager,
     )
+
+
+def get_moodstamp_repository(
+    conn: sqlite3.Connection = Depends(get_connection),
+) -> MoodStampRepository:
+    return SQLiteMoodRepository(conn)
+
+
+def get_mood_service(
+    moodstamp_repository: MoodStampRepository = Depends(
+        get_moodstamp_repository
+    ),
+) -> MoodService:
+    return MoodService(moodstamp_repository)
