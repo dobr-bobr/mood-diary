@@ -5,6 +5,7 @@ from fastapi import FastAPI, Request, HTTPException
 from mood_diary.backend.database.db import init_db
 from mood_diary.backend.exceptions.base import BaseApplicationException
 from mood_diary.backend.routes.auth import router as auth_router
+from mood_diary.backend.routes.mood import router as mood_router
 
 
 def get_app(config) -> FastAPI:
@@ -34,5 +35,6 @@ def get_app(config) -> FastAPI:
         )
 
     app.include_router(auth_router, tags=["Auth"], prefix="/auth")
+    app.include_router(mood_router, tags=["Mood"], prefix="/mood")
 
     return app
