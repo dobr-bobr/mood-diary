@@ -27,7 +27,7 @@ class SQLiteMoodRepository(MoodStampRepository):
                 user_id TEXT FOREIGN KEY,
                 date DATE UNIQUE NOT NULL,
                 value INT NOT NULL,
-                note TEXT,
+                note TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             )
