@@ -1,6 +1,5 @@
 from abc import abstractmethod
 from datetime import date
-from typing import List
 from uuid import UUID
 
 from mood_diary.backend.repositories.base import BaseRepository
@@ -26,7 +25,7 @@ class MoodStampRepository(BaseRepository):
     @abstractmethod
     async def get_many(
             self, user_id: UUID, body: MoodStampFilter
-    ) -> List[MoodStamp]:
+    ) -> list[MoodStamp]:
         """
         Get multiple moodstamps based on filter criteria.
         Returns empty list if no stamps found

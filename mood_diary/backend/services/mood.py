@@ -1,4 +1,3 @@
-from typing import List
 from uuid import UUID
 from datetime import date
 
@@ -99,7 +98,7 @@ class MoodService:
 
     async def get_many(
             self, user_id: UUID, body: GetManyMoodStampsRequest
-    ) -> List[MoodStamp]:
+    ) -> list[MoodStamp]:
         filter = MoodStampFilter(
             start_date=body.start_date,
             end_date=body.end_date,

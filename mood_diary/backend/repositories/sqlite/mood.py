@@ -1,6 +1,6 @@
 import sqlite3
 from datetime import datetime, date
-from typing import List, Union
+from typing import Union
 from uuid import UUID, uuid4
 
 from mood_diary.backend.exceptions.mood import MoodStampAlreadyExistsErrorRepo
@@ -57,10 +57,10 @@ class SQLiteMoodRepository(MoodStampRepository):
 
     async def get_many(
             self, user_id: UUID, body: MoodStampFilter
-    ) -> List[MoodStamp]:
+    ) -> list[MoodStamp]:
         cursor = self.connection.cursor()
         query = "SELECT * FROM moodStamps WHERE user_id = ?"
-        params: List[Union[str, date, int]] = [str(user_id)]
+        params: list[Union[str, date, int]] = [str(user_id)]
 
         if body.start_date is not None:
             query += " AND date >= ?"

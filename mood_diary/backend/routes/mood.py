@@ -1,4 +1,3 @@
-from typing import List
 from uuid import UUID
 from datetime import date
 from fastapi import APIRouter, Depends, status, Path
@@ -28,7 +27,7 @@ router = APIRouter()
             "model": MoodStampSchema,
             "description": "MoodStamp recorded successfully",
         },
-        400: {
+        status.HTTP_400_BAD_REQUEST: {
             "model": MessageResponse,
             "description": "MoodStamp already exists",
             "content": {
@@ -77,11 +76,11 @@ async def get_moodstamp(
 
 @router.get(
     "/moodstamp/",
-    response_model=List[MoodStampSchema],
+    response_model=list[MoodStampSchema],
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
-            "model": List[MoodStampSchema],
+            "model": list[MoodStampSchema],
             "description": "MoodStamps retrieved successfully",
         },
         status.HTTP_404_NOT_FOUND: {
