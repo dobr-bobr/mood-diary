@@ -42,8 +42,8 @@ class JWTTokenManager(TokenManager):
         self,
         secret_key: str,
         algorithm: str,
-        access_token_exp_minutes: int,
-        refresh_token_exp_minutes: int,
+        access_token_exp_minutes: float,
+        refresh_token_exp_minutes: float,
     ):
         self.secret_key = secret_key
         self.algorithm = algorithm

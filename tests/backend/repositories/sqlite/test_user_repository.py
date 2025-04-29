@@ -1,7 +1,7 @@
 import sqlite3
 import uuid
-from datetime import datetime
-from unittest.mock import ANY, AsyncMock, MagicMock, patch
+from datetime import datetime, timezone
+from unittest.mock import ANY, AsyncMock, MagicMock, patch, Mock
 
 import pytest
 
@@ -93,9 +93,17 @@ async def test_get_user_found(
     assert user is not None
     assert user.id == sample_user_schema.id
     assert user.username == sample_user_schema.username
+    assert user.name == sample_user_schema.name
+    assert user.hashed_password == sample_user_schema.hashed_password
     assert user.created_at.replace(
         tzinfo=None
     ) == sample_user_schema.created_at.replace(tzinfo=None)
+    assert user.updated_at.replace(
+        tzinfo=None
+    ) == sample_user_schema.updated_at.replace(tzinfo=None)
+    assert user.password_updated_at.replace(
+        tzinfo=None
+    ) == sample_user_schema.password_updated_at.replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -139,6 +147,18 @@ async def test_get_by_username_found(
     mock_cursor.fetchone.assert_called_once()
     assert user is not None
     assert user.username == username
+    assert user.id == sample_user_schema.id
+    assert user.name == sample_user_schema.name
+    assert user.hashed_password == sample_user_schema.hashed_password
+    assert user.created_at.replace(
+        tzinfo=None
+    ) == sample_user_schema.created_at.replace(tzinfo=None)
+    assert user.updated_at.replace(
+        tzinfo=None
+    ) == sample_user_schema.updated_at.replace(tzinfo=None)
+    assert user.password_updated_at.replace(
+        tzinfo=None
+    ) == sample_user_schema.password_updated_at.replace(tzinfo=None)
 
 
 @pytest.mark.asyncio
@@ -163,7 +183,6 @@ async def test_get_by_username_not_found(
 
 @pytest.mark.asyncio
 async def test_create_user_success(
-        user_repo: SQLiteUserRepository,
         mock_connection: AsyncMock,
         mock_cursor: MagicMock,
         sample_user_schema: User,
@@ -173,13 +192,20 @@ async def test_create_user_success(
         name="New User",
         hashed_password="new_hashed_password",
     )
-    user_repo.get_by_username.return_value = sample_user_schema
+    repo = SQLiteUserRepository(mock_connection)
+    repo.get_by_username = AsyncMock(return_value=sample_user_schema)
+
+    # Freeze time for timestamp checks
+    fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
     with patch(
             "mood_diary.backend.repositories.sqlite.user.uuid4",
             return_value=sample_user_schema.id,
+    ), patch(
+        "mood_diary.backend.repositories.sqlite.user.datetime",
+        Mock(now=Mock(return_value=fixed_time)),
     ):
-        created_user = await user_repo.create(create_data)
+        created_user = await repo.create(create_data)
 
     mock_connection.cursor.assert_called_once()
     mock_cursor.execute.assert_called_once_with(
@@ -189,20 +215,19 @@ async def test_create_user_success(
             create_data.username,
             create_data.name,
             create_data.hashed_password,
-            ANY,
-            ANY,
-            ANY,
+            fixed_time,
+            fixed_time,
+            fixed_time,
         ),
     )
     assert "INSERT INTO users" in mock_cursor.execute.call_args[0][0]
     mock_connection.commit.assert_called_once()
-    user_repo.get_by_username.assert_awaited_once_with(create_data.username)
+    repo.get_by_username.assert_awaited_once_with(create_data.username)
     assert created_user == sample_user_schema
 
 
 @pytest.mark.asyncio
 async def test_create_user_integrity_error(
-        user_repo: SQLiteUserRepository,
         mock_connection: AsyncMock,
         mock_cursor: MagicMock,
 ):
@@ -212,28 +237,34 @@ async def test_create_user_integrity_error(
         hashed_password="existing_password",
     )
     mock_cursor.execute.side_effect = sqlite3.IntegrityError
+    repo = SQLiteUserRepository(mock_connection)
+    # Mock the get_by_username method for this test instance
+    repo.get_by_username = AsyncMock()
 
-    created_user = await user_repo.create(create_data)
+    created_user = await repo.create(create_data)
 
     mock_connection.cursor.assert_called_once()
     mock_cursor.execute.assert_called_once()
     mock_connection.commit.assert_not_called()
-    user_repo.get_by_username.assert_not_awaited()
+    repo.get_by_username.assert_not_awaited()
     assert created_user is None
 
 
 @pytest.mark.asyncio
 async def test_update_profile_success(
-        user_repo: SQLiteUserRepository,
         mock_connection: AsyncMock,
         mock_cursor: MagicMock,
         sample_user_schema: User,
 ):
     user_id = sample_user_schema.id
     update_data = UpdateUserProfile(name="Updated Name")
-    user_repo.get.return_value = sample_user_schema
+    repo = SQLiteUserRepository(mock_connection)
+    # Mock the get method for this test instance
+    repo.get = AsyncMock(return_value=sample_user_schema)
 
-    updated_user = await user_repo.update_profile(user_id, update_data)
+    # Check the type of the object passed to update_profile
+    assert isinstance(update_data, UpdateUserProfile)
+    updated_user = await repo.update_profile(user_id, update_data)
 
     mock_connection.cursor.assert_called_once()
     mock_cursor.execute.assert_called_once_with(
@@ -241,13 +272,12 @@ async def test_update_profile_success(
         (update_data.name, ANY, str(user_id)),
     )
     mock_connection.commit.assert_called_once()
-    user_repo.get.assert_awaited_once_with(user_id)
+    repo.get.assert_awaited_once_with(user_id)
     assert updated_user == sample_user_schema
 
 
 @pytest.mark.asyncio
 async def test_update_hashed_password_success(
-        user_repo: SQLiteUserRepository,
         mock_connection: AsyncMock,
         mock_cursor: MagicMock,
         sample_user_schema: User,
@@ -256,9 +286,13 @@ async def test_update_hashed_password_success(
     update_data = UpdateUserHashedPassword(
         hashed_password="new_hashed_password"
     )
-    user_repo.get.return_value = sample_user_schema
+    repo = SQLiteUserRepository(mock_connection)
+    # Mock the get method for this test instance
+    repo.get = AsyncMock(return_value=sample_user_schema)
 
-    updated_user = await user_repo.update_hashed_password(user_id, update_data)
+    # Check the type of the object passed to update_hashed_password
+    assert isinstance(update_data, UpdateUserHashedPassword)
+    updated_user = await repo.update_hashed_password(user_id, update_data)
 
     mock_connection.cursor.assert_called_once()
     assert mock_cursor.execute.call_count == 1
@@ -276,5 +310,5 @@ async def test_update_hashed_password_success(
     assert sql_params[2] == str(user_id)
 
     mock_connection.commit.assert_called_once()
-    user_repo.get.assert_awaited_once_with(user_id)
+    repo.get.assert_awaited_once_with(user_id)
     assert updated_user == sample_user_schema

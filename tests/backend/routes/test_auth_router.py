@@ -24,11 +24,16 @@ from mood_diary.backend.services.user import UserService
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
     TokenManager,
+    TokenType
 )
 from mood_diary.common.api.schemas.auth import (
     LoginResponse,
     Profile,
     RefreshResponse,
+    RegisterRequest,
+    LoginRequest,
+    RefreshRequest,
+    ChangePasswordRequest,
 )
 
 
@@ -57,27 +62,24 @@ def main_app():
 def override_dependencies(
     mock_user_service: AsyncMock, test_token_manager: TokenManager, main_app
 ):
-    test_user_id = uuid.uuid4()
+    # The test_user_id is no longer yielded directly, as the real dependency will extract it
+    # test_user_id = uuid.uuid4() # Remove this fixed UUID if it was only for the mock
 
-    async def mock_get_current_user_id_simple_check(
-        authorization: str | None = Header(None),
-        token_manager: TokenManager = Depends(lambda: test_token_manager),
-    ) -> uuid.UUID:
-        if not authorization or not authorization.startswith("Bearer "):
-            raise InvalidOrExpiredAccessToken()
-
-        return test_user_id
+    # Remove the mock dependency function
+    # async def mock_get_current_user_id_simple_check(...): ...
 
     main_app.dependency_overrides[get_user_service] = lambda: mock_user_service
     main_app.dependency_overrides[get_token_manager] = (
         lambda: test_token_manager
     )
-    main_app.dependency_overrides[get_current_user_id] = (
-        mock_get_current_user_id_simple_check
-    )
+    # Do NOT override get_current_user_id here anymore, let the app use the real one
+    # main_app.dependency_overrides[get_current_user_id] = (
+    #     mock_get_current_user_id_simple_check
+    # )
 
-    yield test_user_id
+    yield # Yield control to the test function
 
+    # Clean up overrides
     main_app.dependency_overrides = {}
 
 
@@ -91,8 +93,10 @@ def client(override_dependencies, main_app):
 def sample_profile_data():
     now = datetime.now(timezone.utc)
     now_iso = now.isoformat().replace("+00:00", "Z")
+    # Use a consistent UUID for sample data generation if needed elsewhere
+    test_user_id_for_data = uuid.uuid4()
     return {
-        "id": str(uuid.uuid4()),
+        "id": str(test_user_id_for_data), # Ensure this uses a UUID
         "username": "testuser",
         "name": "Test User",
         "created_at": now_iso,
@@ -126,16 +130,20 @@ def test_register_success(
     assert response_data["name"] == sample_profile_data["name"]
     # Check Profile response types and format
     assert isinstance(response_data["id"], str)
+    assert response_data["id"] == sample_profile_data["id"]
     try:
         uuid.UUID(response_data["id"])
     except ValueError:
         pytest.fail(f"Invalid UUID format for id: {response_data['id']}")
     assert isinstance(response_data["created_at"], str)
     assert is_iso_datetime_z(response_data["created_at"])
+    assert response_data["created_at"] == sample_profile_data["created_at"]
     assert isinstance(response_data["updated_at"], str)
     assert is_iso_datetime_z(response_data["updated_at"])
+    assert response_data["updated_at"] == sample_profile_data["updated_at"]
     assert isinstance(response_data["password_updated_at"], str)
     assert is_iso_datetime_z(response_data["password_updated_at"])
+    assert response_data["password_updated_at"] == sample_profile_data["password_updated_at"]
 
     mock_user_service.register.assert_awaited_once()
 
@@ -197,6 +205,15 @@ def test_register_username_exists(
     response = client.post("/api/auth/register", json=register_payload)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
     assert response.json() == {"detail": "Username already exists"}
+    mock_user_service.register.assert_awaited_once()
+    # Check arguments passed to the service
+    call_args = mock_user_service.register.call_args[0]
+    assert isinstance(call_args[0], RegisterRequest)
+    assert call_args[0].username == register_payload["username"]
+    assert call_args[0].password == register_payload["password"]
+    assert call_args[0].name == register_payload["name"]
+    # Ensure the correct exception was raised by the mock
+    assert isinstance(mock_user_service.register.side_effect, UsernameAlreadyExists)
 
 
 def test_register_validation_error(client: TestClient):
@@ -226,6 +243,19 @@ def test_register_validation_error(client: TestClient):
         ({"username": invalid_long_user, "password": valid_min_pass, "name": valid_min_name}, 422),
         ({"username": valid_min_user, "password": invalid_long_pass, "name": valid_min_name}, 422),
         ({"username": valid_min_user, "password": valid_min_pass, "name": invalid_long_name}, 422),
+        # Missing fields
+        ({"password": valid_min_pass, "name": valid_min_name}, 422), # Missing username
+        ({"username": valid_min_user, "name": valid_min_name}, 422), # Missing password
+        ({"username": valid_min_user, "password": valid_min_pass}, 422), # Missing name
+        ({}, 422), # Missing all
+        # Null fields
+        ({"username": None, "password": valid_min_pass, "name": valid_min_name}, 422),
+        ({"username": valid_min_user, "password": None, "name": valid_min_name}, 422),
+        ({"username": valid_min_user, "password": valid_min_pass, "name": None}, 422),
+        # Wrong types
+        ({"username": 123, "password": valid_min_pass, "name": valid_min_name}, 422),
+        ({"username": valid_min_user, "password": 123, "name": valid_min_name}, 422),
+        ({"username": valid_min_user, "password": valid_min_pass, "name": 123}, 422),
     ]
 
     for payload, expected_status in test_cases:
@@ -244,9 +274,11 @@ def test_login_success(client: TestClient, mock_user_service: AsyncMock):
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
     assert response_data == login_response_data
-    # Check LoginResponse types
+    # Check LoginResponse types and content
     assert isinstance(response_data["access_token"], str)
+    assert len(response_data["access_token"]) > 0
     assert isinstance(response_data["refresh_token"], str)
+    assert len(response_data["refresh_token"]) > 0
     mock_user_service.login.assert_awaited_once()
 
 
@@ -298,10 +330,20 @@ def test_login_unauthorized(client: TestClient, mock_user_service: AsyncMock):
     assert response.json() == {
         "detail": "Incorrect password or username does not exist"
     }
+    mock_user_service.login.assert_awaited_once()
+    # Check arguments passed to the service
+    call_args = mock_user_service.login.call_args[0]
+    assert isinstance(call_args[0], LoginRequest)
+    assert call_args[0].username == login_payload["username"]
+    assert call_args[0].password == login_payload["password"]
+    # Ensure the correct exception was raised by the mock
+    assert isinstance(mock_user_service.login.side_effect, IncorrectPasswordOrUserDoesNotExists)
 
 
-def test_validate_token_success(client: TestClient, override_dependencies):
-    headers = {"Authorization": "Bearer valid.token.for.test"}
+def test_validate_token_success(client: TestClient, override_dependencies, test_token_manager: JWTTokenManager):
+    # Create a valid token
+    access_token = test_token_manager.create_token(token_type=TokenType.ACCESS, user_id=uuid.uuid4()) # Pass UUID directly
+    headers = {"Authorization": f"Bearer {access_token}"}
     response = client.post("/api/auth/validate", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     assert response.content == b""
@@ -333,6 +375,9 @@ def test_refresh_token_success(
     response = client.post("/api/auth/refresh", json=refresh_payload)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == refresh_response_data
+    # Check RefreshResponse content
+    assert isinstance(refresh_response_data["access_token"], str)
+    assert len(refresh_response_data["access_token"]) > 0
     mock_user_service.refresh.assert_awaited_once()
 
 
@@ -344,6 +389,13 @@ def test_refresh_token_unauthorized(
     response = client.post("/api/auth/refresh", json=refresh_payload)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid or expired refresh token"}
+    mock_user_service.refresh.assert_awaited_once()
+    # Check arguments passed to the service
+    call_args = mock_user_service.refresh.call_args[0]
+    assert isinstance(call_args[0], RefreshRequest)
+    assert call_args[0].refresh_token == refresh_payload["refresh_token"]
+    # Ensure the correct exception was raised by the mock
+    assert isinstance(mock_user_service.refresh.side_effect, InvalidOrExpiredRefreshToken)
 
 
 def test_refresh_success_boundaries(client: TestClient, mock_user_service: AsyncMock):
@@ -372,6 +424,8 @@ def test_refresh_validation_error(client: TestClient):
         ({}, 422),
         # Null token field
         ({"refresh_token": None}, 422),
+        # Wrong type
+        ({"refresh_token": 12345}, 422),
     ]
 
     for payload, expected_status in test_cases:
@@ -384,27 +438,39 @@ def test_get_profile_success(
     mock_user_service: AsyncMock,
     sample_profile_data,
     override_dependencies,
+    test_token_manager: JWTTokenManager
 ):
-    user_id = override_dependencies
+    # Extract the user ID used in sample_profile_data
+    user_id = uuid.UUID(sample_profile_data['id'])
     mock_user_service.get_profile.return_value = Profile(**sample_profile_data)
-    headers = {"Authorization": "Bearer valid.token.for.test"}
+
+    # Create a valid access token for the user ID
+    access_token = test_token_manager.create_token(token_type=TokenType.ACCESS, user_id=user_id)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
     response = client.get("/api/auth/profile", headers=headers)
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
     # Check Profile response types and format
     assert isinstance(response_data["id"], str)
+    assert response_data["id"] == sample_profile_data["id"]
     try:
         uuid.UUID(response_data["id"])
     except ValueError:
         pytest.fail(f"Invalid UUID format for id: {response_data['id']}")
     assert isinstance(response_data["username"], str)
+    assert response_data["username"] == sample_profile_data["username"]
     assert isinstance(response_data["name"], str)
+    assert response_data["name"] == sample_profile_data["name"]
     assert isinstance(response_data["created_at"], str)
     assert is_iso_datetime_z(response_data["created_at"])
+    assert response_data["created_at"] == sample_profile_data["created_at"]
     assert isinstance(response_data["updated_at"], str)
     assert is_iso_datetime_z(response_data["updated_at"])
+    assert response_data["updated_at"] == sample_profile_data["updated_at"]
     assert isinstance(response_data["password_updated_at"], str)
     assert is_iso_datetime_z(response_data["password_updated_at"])
+    assert response_data["password_updated_at"] == sample_profile_data["password_updated_at"]
 
     # Compare main values
     assert response_data["id"] == sample_profile_data["id"]
@@ -425,8 +491,10 @@ def test_update_profile_success(
     mock_user_service: AsyncMock,
     sample_profile_data,
     override_dependencies,
+    test_token_manager: JWTTokenManager
 ):
-    user_id = override_dependencies
+    # Extract user ID from sample data
+    user_id = uuid.UUID(sample_profile_data['id'])
     updated_profile_data = sample_profile_data.copy()
     new_name = "New Name"
     updated_profile_data["name"] = new_name
@@ -434,7 +502,10 @@ def test_update_profile_success(
     mock_user_service.update_profile.return_value = expected_profile
 
     profile_payload = {"name": new_name}
-    headers = {"Authorization": "Bearer valid.token.for.test"}
+    # Create a valid access token
+    access_token = test_token_manager.create_token(token_type=TokenType.ACCESS, user_id=user_id)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
     response = client.put(
         "/api/auth/profile", json=profile_payload, headers=headers
     )
@@ -447,6 +518,8 @@ def test_update_profile_success(
     assert response_data["updated_at"] == expected_profile.updated_at.isoformat().replace("+00:00", "Z")
     assert response_data["created_at"] == expected_profile.created_at.isoformat().replace("+00:00", "Z")
     assert response_data["password_updated_at"] == expected_profile.password_updated_at.isoformat().replace("+00:00", "Z")
+    # Verify all fields match the expected Profile schema returned by the mock service
+    assert response_data == expected_profile.model_dump(mode='json')
 
     mock_user_service.update_profile.assert_awaited_once()
     call_args = mock_user_service.update_profile.call_args[0]
@@ -459,12 +532,12 @@ def test_update_profile_success_boundaries(
     mock_user_service: AsyncMock,
     sample_profile_data,
     override_dependencies,
+    test_token_manager: JWTTokenManager
 ):
-    """Tests successful profile update with boundary length inputs."""
-    user_id = override_dependencies
-    headers = {"Authorization": "Bearer valid.token.for.test"}
+    # Extract user ID from sample data
+    user_id = uuid.UUID(sample_profile_data['id'])
     base_profile = sample_profile_data.copy()
-    base_profile["id"] = str(user_id) # Use the actual user_id
+    # base_profile["id"] = str(user_id) # Already set in sample_profile_data
 
     # Min/Max lengths
     min_name = "n" * 3
@@ -484,6 +557,10 @@ def test_update_profile_success_boundaries(
         profile_data["updated_at"] = datetime.now(timezone.utc)
         mock_user_service.update_profile.return_value = Profile(**profile_data)
 
+        # Create a valid access token for each case
+        access_token = test_token_manager.create_token(token_type=TokenType.ACCESS, user_id=user_id)
+        headers = {"Authorization": f"Bearer {access_token}"}
+
         response = client.put(
             "/api/auth/profile", json=payload, headers=headers
         )
@@ -495,7 +572,7 @@ def test_update_profile_success_boundaries(
 
 
 def test_update_profile_validation_error(
-    client: TestClient, override_dependencies
+    client: TestClient, override_dependencies, test_token_manager: JWTTokenManager
 ):
     # Min/Max lengths
     min_name = "n" * 3
@@ -505,7 +582,9 @@ def test_update_profile_validation_error(
     invalid_short_name = "n" * (3 - 1)
     invalid_long_name = "n" * (32 + 1)
 
-    headers = {"Authorization": "Bearer valid.token.for.test"}
+    # Create a valid token once, needed for authorization
+    access_token = test_token_manager.create_token(token_type=TokenType.ACCESS, user_id=uuid.uuid4()) # Pass UUID directly
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     test_cases = [
         # Name too short
@@ -514,10 +593,12 @@ def test_update_profile_validation_error(
         ({"name": invalid_long_name}, 422),
         # Original case (name too short)
         ({"name": "N"}, 422),
-        # Missing field
-        ({}, 422),
+        # Missing field - Note: PUT requires the field, so this becomes 422
+        ({}, 422), # FastAPI should catch missing 'name'
         # Null field
         ({"name": None}, 422),
+        # Wrong type
+        ({"name": 123}, 422),
     ]
 
     for payload, expected_status in test_cases:
@@ -555,6 +636,16 @@ def test_login_validation_error(client: TestClient):
         # Too long
         ({"username": invalid_long_user, "password": valid_min_pass}, 422),
         ({"username": valid_min_user, "password": invalid_long_pass}, 422),
+        # Missing fields
+        ({"password": valid_min_pass}, 422), # Missing username
+        ({"username": valid_min_user}, 422), # Missing password
+        ({}, 422), # Missing all
+        # Null fields
+        ({"username": None, "password": valid_min_pass}, 422),
+        ({"username": valid_min_user, "password": None}, 422),
+        # Wrong types
+        ({"username": 123, "password": valid_min_pass}, 422),
+        ({"username": valid_min_user, "password": 123}, 422),
     ]
 
     for payload, expected_status in test_cases:
@@ -563,15 +654,19 @@ def test_login_validation_error(client: TestClient):
 
 
 def test_change_password_success(
-    client: TestClient, mock_user_service: AsyncMock, override_dependencies
+    client: TestClient, mock_user_service: AsyncMock, override_dependencies, test_token_manager: JWTTokenManager
 ):
-    user_id = override_dependencies
+    # Create a dummy user ID for the token
+    user_id = uuid.uuid4()
     mock_user_service.change_password.return_value = None
     password_payload = {
         "old_password": "oldPass123",
         "new_password": "newPass456!",
     }
-    headers = {"Authorization": "Bearer valid.token.for.test"}
+    # Create a valid token
+    access_token = test_token_manager.create_token(token_type=TokenType.ACCESS, user_id=user_id)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
     response = client.put(
         "/api/auth/password", json=password_payload, headers=headers
     )
@@ -579,17 +674,19 @@ def test_change_password_success(
     assert response.json() is None
     mock_user_service.change_password.assert_awaited_once()
     call_args = mock_user_service.change_password.call_args[0]
-    assert call_args[0] == user_id
+    assert call_args[0] == user_id # Assert with the user_id from the token
     assert call_args[1].old_password == "oldPass123"
     assert call_args[1].new_password == "newPass456!"
 
 
 def test_change_password_success_boundaries(
-    client: TestClient, mock_user_service: AsyncMock, override_dependencies
+    client: TestClient, mock_user_service: AsyncMock, override_dependencies, test_token_manager: JWTTokenManager
 ):
-    """Tests successful password change with boundary length inputs."""
-    user_id = override_dependencies
-    headers = {"Authorization": "Bearer valid.token.for.test"}
+    # Create dummy user ID
+    user_id = uuid.uuid4()
+    # Create a valid token
+    access_token = test_token_manager.create_token(token_type=TokenType.ACCESS, user_id=user_id)
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     # Min/Max lengths
     min_pass = "p" * 8
@@ -619,25 +716,37 @@ def test_change_password_success_boundaries(
 
 
 def test_change_password_incorrect_old(
-    client: TestClient, mock_user_service: AsyncMock, override_dependencies
+    client: TestClient, mock_user_service: AsyncMock, override_dependencies, test_token_manager: JWTTokenManager
 ):
-    user_id = override_dependencies
+    # Dummy user ID for token
+    user_id = uuid.uuid4()
     mock_user_service.change_password.side_effect = IncorrectOldPassword()
     password_payload = {
         "old_password": "wrongOldPass",
         "new_password": "newPass456!",
     }
-    headers = {"Authorization": "Bearer valid.token.for.test"}
+    # Create valid token
+    access_token = test_token_manager.create_token(token_type=TokenType.ACCESS, user_id=user_id)
+    headers = {"Authorization": f"Bearer {access_token}"}
+
     response = client.put(
         "/api/auth/password", json=password_payload, headers=headers
     )
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Incorrect old password"}
     mock_user_service.change_password.assert_awaited_once()
+    # Check arguments passed to the service
+    call_args = mock_user_service.change_password.call_args[0]
+    assert call_args[0] == user_id # Check user_id from token
+    assert isinstance(call_args[1], ChangePasswordRequest)
+    assert call_args[1].old_password == password_payload["old_password"]
+    assert call_args[1].new_password == password_payload["new_password"]
+    # Ensure the correct exception was raised by the mock
+    assert isinstance(mock_user_service.change_password.side_effect, IncorrectOldPassword)
 
 
 def test_change_password_validation_error(
-    client: TestClient, override_dependencies
+    client: TestClient, override_dependencies, test_token_manager: JWTTokenManager
 ):
     # Min/Max lengths
     min_pass = "p" * 8
@@ -647,7 +756,9 @@ def test_change_password_validation_error(
     invalid_short_pass = "p" * (8 - 1)
     invalid_long_pass = "p" * (32 + 1)
 
-    headers = {"Authorization": "Bearer valid.token.for.test"}
+    # Create valid token
+    access_token = test_token_manager.create_token(token_type=TokenType.ACCESS, user_id=uuid.uuid4()) # Pass UUID directly
+    headers = {"Authorization": f"Bearer {access_token}"}
 
     test_cases = [
         # Old password too short
@@ -667,6 +778,9 @@ def test_change_password_validation_error(
         # Null fields
         ({"old_password": None, "new_password": min_pass}, 422),
         ({"old_password": min_pass, "new_password": None}, 422),
+        # Wrong types
+        ({"old_password": 123, "new_password": min_pass}, 422),
+        ({"old_password": min_pass, "new_password": 123}, 422),
     ]
 
     for payload, expected_status in test_cases:
@@ -674,3 +788,55 @@ def test_change_password_validation_error(
             "/api/auth/password", json=payload, headers=headers
         )
         assert response.status_code == expected_status, f"Failed for payload: {payload}"
+
+
+# --- Tests for Invalid Tokens --- #
+
+def test_get_profile_expired_token(client: TestClient, override_dependencies):
+    """Test accessing profile with an expired token."""
+    # Create a token manager that issues immediately expiring tokens
+    expired_token_manager = JWTTokenManager(
+        secret_key="fixed-test-secret-key", # Must match the app's key
+        algorithm="HS256",
+        access_token_exp_minutes=-1, # Expired
+        refresh_token_exp_minutes=10,
+    )
+    user_id = uuid.uuid4()
+    expired_token = expired_token_manager.create_token(token_type=TokenType.ACCESS, user_id=user_id)
+    headers = {"Authorization": f"Bearer {expired_token}"}
+
+    response = client.get("/api/auth/profile", headers=headers)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Invalid or expired access token"}
+
+
+def test_get_profile_invalid_signature_token(client: TestClient, override_dependencies):
+    """Test accessing profile with a token signed by a different key."""
+    # Create a token manager with a different secret key
+    wrong_key_token_manager = JWTTokenManager(
+        secret_key="different-secret-key",
+        algorithm="HS256",
+        access_token_exp_minutes=5,
+        refresh_token_exp_minutes=10,
+    )
+    user_id = uuid.uuid4()
+    wrong_key_token = wrong_key_token_manager.create_token(token_type=TokenType.ACCESS, user_id=user_id)
+    headers = {"Authorization": f"Bearer {wrong_key_token}"}
+
+    response = client.get("/api/auth/profile", headers=headers)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Invalid or expired access token"}
+
+
+def test_get_profile_invalid_token_format(client: TestClient, override_dependencies):
+    """Test accessing profile with an invalid token format."""
+    headers = {"Authorization": "Bearer not.a.valid.jwt.token"}
+    response = client.get("/api/auth/profile", headers=headers)
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+    assert response.json() == {"detail": "Invalid or expired access token"}
+
+# --- End of Invalid Token Tests --- #
+
+
+# Test case for invalid scheme remains valid
+# ... existing code ...
