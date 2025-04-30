@@ -18,7 +18,6 @@ from mood_diary.backend.utils.password_hasher import (
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
     TokenManager,
-    TokenType,
 )
 
 
