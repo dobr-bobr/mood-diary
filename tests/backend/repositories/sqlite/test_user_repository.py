@@ -13,6 +13,11 @@ from mood_diary.backend.repositories.sсhemas.user import (
     User,
 )
 
+from tests.backend.repositories.sqlite.base_fixtures import (
+    mock_connection,
+    mock_cursor,
+)
+
 
 # --- Fixtures ---
 
