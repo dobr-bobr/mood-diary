@@ -209,9 +209,7 @@ def test_change_password_success(
         "new_password": "newPass456!",
     }
     client.cookies.set("access_token", "valid.token.for.test")
-    response = client.put(
-        "/api/auth/password", json=password_payload
-    )
+    response = client.put("/api/auth/password", json=password_payload)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() is None
     mock_user_service.change_password.assert_awaited_once()
@@ -231,9 +229,7 @@ def test_change_password_incorrect_old(
         "new_password": "newPass456!",
     }
     client.cookies.set("access_token", "valid.token.for.test")
-    response = client.put(
-        "/api/auth/password", json=password_payload
-    )
+    response = client.put("/api/auth/password", json=password_payload)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Incorrect old password"}
 
@@ -246,9 +242,7 @@ def test_change_password_validation_error(
         "new_password": "short",
     }
     client.cookies.set("access_token", "valid.token.for.test")
-    response = client.put(
-        "/api/auth/password", json=password_payload
-    )
+    response = client.put("/api/auth/password", json=password_payload)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -270,9 +264,7 @@ def test_update_profile_success(
 
     profile_payload = {"name": "New Name"}
     client.cookies.set("access_token", "valid.token.for.test")
-    response = client.put(
-        "/api/auth/profile", json=profile_payload
-    )
+    response = client.put("/api/auth/profile", json=profile_payload)
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == updated_profile_data
@@ -287,7 +279,5 @@ def test_update_profile_validation_error(
 ):
     profile_payload = {"name": "N"}
     client.cookies.set("access_token", "valid.token.for.test")
-    response = client.put(
-        "/api/auth/profile", json=profile_payload
-    )
+    response = client.put("/api/auth/profile", json=profile_payload)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

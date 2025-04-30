@@ -13,9 +13,7 @@ from mood_diary.backend.repositories.sсhemas.mood import (
 
 class MoodStampRepository(BaseRepository):
     @abstractmethod
-    async def get(
-            self, user_id: UUID, date: date
-    ) -> MoodStamp | None:
+    async def get(self, user_id: UUID, date: date) -> MoodStamp | None:
         """
         Get moodstamp by entry date.
         Returns None if stamp not found
@@ -24,7 +22,7 @@ class MoodStampRepository(BaseRepository):
 
     @abstractmethod
     async def get_many(
-            self, user_id: UUID, body: MoodStampFilter
+        self, user_id: UUID, body: MoodStampFilter
     ) -> list[MoodStamp]:
         """
         Get multiple moodstamps based on filter criteria.
@@ -33,9 +31,7 @@ class MoodStampRepository(BaseRepository):
         pass
 
     @abstractmethod
-    async def create(
-            self, user_id: UUID, body: CreateMoodStamp
-    ) -> MoodStamp:
+    async def create(self, user_id: UUID, body: CreateMoodStamp) -> MoodStamp:
         """
         Create new moodstamp.
         Returns None if moodstamp with the same entry date already exists
@@ -44,7 +40,7 @@ class MoodStampRepository(BaseRepository):
 
     @abstractmethod
     async def update(
-            self, user_id: UUID, date: date, body: UpdateMoodStamp
+        self, user_id: UUID, date: date, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """
         Update moodstamp by date.
@@ -53,9 +49,7 @@ class MoodStampRepository(BaseRepository):
         pass
 
     @abstractmethod
-    async def delete(
-            self, user_id: UUID, date: date
-    ) -> MoodStamp | None:
+    async def delete(self, user_id: UUID, date: date) -> MoodStamp | None:
         """
         Delete moodstamp by date.
         Returns None if moodstamp not found
