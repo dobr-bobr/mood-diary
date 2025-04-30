@@ -1,7 +1,7 @@
 import sqlite3
 from uuid import UUID
 
-from fastapi import Header, Depends, Cookie
+from fastapi import Depends, Cookie
 
 from mood_diary.backend.config import config
 from mood_diary.backend.exceptions.user import InvalidOrExpiredAccessToken
