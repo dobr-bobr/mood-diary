@@ -12,7 +12,6 @@ from mood_diary.backend.repositories.sсhemas.user import (
     UpdateUserProfile,
     User,
 )
-from tests.backend.repositories.sqlite.base_fixtures import mock_connection, mock_cursor
 
 
 # --- Fixtures ---
@@ -195,7 +194,6 @@ async def test_create_user_success(
     repo = SQLiteUserRepository(mock_connection)
     repo.get_by_username = AsyncMock(return_value=sample_user_schema)
 
-    # Freeze time for timestamp checks
     fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
     with patch(
@@ -238,7 +236,6 @@ async def test_create_user_integrity_error(
     )
     mock_cursor.execute.side_effect = sqlite3.IntegrityError
     repo = SQLiteUserRepository(mock_connection)
-    # Mock the get_by_username method for this test instance
     repo.get_by_username = AsyncMock()
 
     created_user = await repo.create(create_data)
@@ -259,10 +256,8 @@ async def test_update_profile_success(
     user_id = sample_user_schema.id
     update_data = UpdateUserProfile(name="Updated Name")
     repo = SQLiteUserRepository(mock_connection)
-    # Mock the get method for this test instance
     repo.get = AsyncMock(return_value=sample_user_schema)
 
-    # Check the type of the object passed to update_profile
     assert isinstance(update_data, UpdateUserProfile)
     updated_user = await repo.update_profile(user_id, update_data)
 
@@ -287,10 +282,8 @@ async def test_update_hashed_password_success(
         hashed_password="new_hashed_password"
     )
     repo = SQLiteUserRepository(mock_connection)
-    # Mock the get method for this test instance
     repo.get = AsyncMock(return_value=sample_user_schema)
 
-    # Check the type of the object passed to update_hashed_password
     assert isinstance(update_data, UpdateUserHashedPassword)
     updated_user = await repo.update_hashed_password(user_id, update_data)
 

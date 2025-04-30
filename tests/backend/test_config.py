@@ -98,5 +98,4 @@ def test_app_startup_raises_exception_without_secret_key():
     # Use TestClient as a context manager to trigger startup/shutdown events
     with pytest.raises(Exception, match="Please set AUTH_TOKEN_SECRET_KEY environment variable"):
         with TestClient(app) as client:
-            # The exception should be raised when TestClient initializes
             pass

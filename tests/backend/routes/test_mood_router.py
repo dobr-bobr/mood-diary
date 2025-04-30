@@ -19,7 +19,6 @@ from mood_diary.common.api.schemas.mood import (
     MoodStampSchema,
 )
 
-# Import app factory and settings
 from mood_diary.backend.app import get_app
 from mood_diary.backend.config import Settings
 
@@ -143,8 +142,6 @@ def test_create_moodstamp_success(
         # Missing value
         ({"note": "Missing value"}, status.HTTP_422_UNPROCESSABLE_ENTITY),
         # Missing note (should be ok, assuming default or handling)
-        # Note: The schema requires 'note', so this should fail validation if note is truly missing.
-        # Let's test missing 'note' explicitly if the schema requires it.
         ({"value": 5}, status.HTTP_422_UNPROCESSABLE_ENTITY), # Test missing note
     ]
 )
@@ -382,10 +379,6 @@ def test_update_moodstamp_not_found(
         # Invalid value range
         ({"value": 0, "note": "Too low"}, "greater_than_equal"),
         ({"value": 11, "note": "Too high"}, "less_than_equal"),
-        # Invalid note type (if schema changes to validate note length/type)
-        # ({"value": 5, "note": 123}, "string_type"), # Example if note validation added
-        # Missing both fields (should be invalid, but depends on FastAPI/Pydantic handling)
-        #({}, "value_error"), # Expect some validation error if body is empty - Removed as empty body is valid for this schema
     ]
 )
 def test_update_moodstamp_validation_error(

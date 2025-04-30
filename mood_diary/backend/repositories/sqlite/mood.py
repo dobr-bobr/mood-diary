@@ -151,8 +151,8 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         updated_at = datetime.now()
         update_values = {
-            "value": body.value if body.value is not None else row["value"],
-            "note": body.note if body.note is not None else row["note"],
+            "value": body.value if body.value is not None else row[3],
+            "note": body.note if body.note is not None else row[4],
             "updated_at": updated_at,
         }
 

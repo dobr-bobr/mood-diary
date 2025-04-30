@@ -12,10 +12,6 @@ from mood_diary.backend.repositories.sсhemas.mood import (
     UpdateMoodStamp,
     MoodStampFilter,
 )
-from tests.backend.repositories.sqlite.base_fixtures import (
-    mock_connection,
-    mock_cursor,
-)
 
 
 # --- Fixtures ---
@@ -159,19 +155,15 @@ async def test_get_many_moodstamps(
     assert mood.date == sample_mood_data[2]
     assert mood.value == sample_mood_data[3]
     assert mood.note == sample_mood_data[4]
-    # Timestamps might be slightly different, maybe compare only if needed
-    # assert mood.created_at == sample_mood_data[5]
-    # assert mood.updated_at == sample_mood_data[6]
 
 
-# Parametrize get_many tests
 @pytest.mark.parametrize(
     "filter_input, expected_sql_clauses, expected_params_indices",
     [
         (
             MoodStampFilter(start_date=None, end_date=None, value=None),
-            [], # No extra clauses
-            [0] # Only user_id
+            [],
+            [0]
         ),
         (
             MoodStampFilter(start_date=date(2024, 1, 1), end_date=None, value=None),
@@ -223,24 +215,20 @@ async def test_get_many_moodstamps_filtered(
     mock_connection.cursor.assert_called_once()
     mock_cursor.execute.assert_called_once()
 
-    # Check SQL query construction
     actual_sql, actual_params = mock_cursor.execute.call_args[0]
     base_query = "SELECT * FROM moodStamps WHERE user_id = ?"
     assert actual_sql.startswith(base_query)
     for clause in expected_sql_clauses:
         assert clause in actual_sql
 
-    # Check parameters passed to execute
     expected_params: list[Union[str, date, int]] = [str(user_id)]
     if filter_input.start_date: expected_params.append(filter_input.start_date)
     if filter_input.end_date: expected_params.append(filter_input.end_date)
     if filter_input.value: expected_params.append(filter_input.value)
 
     assert len(actual_params) == len(expected_params)
-    # Reorder actual params based on expected indices if needed, though typically they are appended
     assert list(actual_params) == expected_params
 
-    # Check returned data (basic check)
     assert isinstance(moods, list)
     assert len(moods) == 1
     assert moods[0].id == uuid.UUID(sample_mood_data[0])
@@ -261,7 +249,6 @@ async def test_create_moodstamp_success(
     mock_cursor.fetchone.return_value = None
     repo = SQLiteMoodRepository(mock_connection)
 
-    # Freeze time for timestamp checks
     fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
     with patch(
@@ -271,14 +258,12 @@ async def test_create_moodstamp_success(
         "mood_diary.backend.repositories.sqlite.mood.datetime",
         Mock(now=Mock(return_value=fixed_time)),
     ):
-        # Check the type of the object passed to create
         assert isinstance(create_data, CreateMoodStamp)
         created_mood = await repo.create(sample_mood_schema.user_id, create_data)
 
     mock_connection.cursor.assert_called()
     assert mock_cursor.execute.call_count >= 2
 
-    # Check the INSERT call specifically
     insert_call = None
     for call in mock_cursor.execute.call_args_list:
         if "INSERT INTO moodStamps" in call[0][0]:
@@ -293,8 +278,8 @@ async def test_create_moodstamp_success(
         sample_mood_schema.date,
         sample_mood_schema.value,
         sample_mood_schema.note,
-        fixed_time, # Check created_at
-        fixed_time, # Check updated_at
+        fixed_time,
+        fixed_time,
     )
     assert insert_call[0][1] == expected_params
 
@@ -305,7 +290,6 @@ async def test_create_moodstamp_success(
     assert created_mood.date == create_data.date
     assert created_mood.value == create_data.value
     assert created_mood.note == create_data.note
-    # Check timestamps using the fixed time
     assert created_mood.created_at == fixed_time
     assert created_mood.updated_at == fixed_time
 
@@ -350,7 +334,6 @@ async def test_update_moodstamp_success(
     mood_date = sample_mood_schema.date
     repo = SQLiteMoodRepository(mock_connection)
 
-    # Provide the original row data for the initial SELECT
     original_row_dict = {
         "id": str(sample_mood_schema.id),
         "user_id": str(user_id),
@@ -362,18 +345,15 @@ async def test_update_moodstamp_success(
     }
     mock_cursor.fetchone.return_value = original_row_dict
 
-    # Freeze time for timestamp checks
     fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
     with patch(
         "mood_diary.backend.repositories.sqlite.mood.datetime",
         Mock(now=Mock(return_value=fixed_time)),
     ):
-        # Check the type of the object passed to update
         assert isinstance(update_data, UpdateMoodStamp)
         updated_mood = await repo.update(user_id, mood_date, update_data)
 
-    # Check SELECT call
     select_call = None
     update_call = None
     for call in mock_cursor.execute.call_args_list:
@@ -385,13 +365,12 @@ async def test_update_moodstamp_success(
 
     assert select_call is not None
     assert select_call[0][1] == (str(user_id), mood_date)
-
-    # Check UPDATE call
+    
     assert update_call is not None
     expected_params = (
         update_data.value,
         update_data.note,
-        fixed_time, # Check updated_at
+        fixed_time,
         str(user_id),
         mood_date,
     )
@@ -407,7 +386,6 @@ async def test_update_moodstamp_success(
     assert updated_mood.created_at.replace(
         tzinfo=None
     ) == sample_mood_schema.created_at.replace(tzinfo=None)
-    # Check updated_at using the fixed time
     assert updated_mood.updated_at == fixed_time
 
 
@@ -418,7 +396,7 @@ async def test_update_moodstamp_only_value(
         sample_mood_schema: MoodStamp,
 ):
     """Test updating only the value of a moodstamp."""
-    update_data = UpdateMoodStamp(value=9, note=None) # Only update value
+    update_data = UpdateMoodStamp(value=9, note=None)
     user_id = sample_mood_schema.user_id
     mood_date = sample_mood_schema.date
     repo = SQLiteMoodRepository(mock_connection)
@@ -428,63 +406,6 @@ async def test_update_moodstamp_only_value(
         "user_id": str(user_id),
         "date": mood_date,
         "value": sample_mood_schema.value,
-        "note": sample_mood_schema.note, # Original note
-        "created_at": sample_mood_schema.created_at,
-        "updated_at": sample_mood_schema.updated_at,
-    }
-    mock_cursor.fetchone.return_value = original_row_dict
-
-    fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
-    with patch(
-        "mood_diary.backend.repositories.sqlite.mood.datetime",
-        Mock(now=Mock(return_value=fixed_time)),
-    ):
-        # Check the type of the object passed to update
-        assert isinstance(update_data, UpdateMoodStamp)
-        updated_mood = await repo.update(user_id, mood_date, update_data)
-
-    # Assertions (similar to test_update_moodstamp_success)
-    update_call = None
-    for call in mock_cursor.execute.call_args_list:
-        if "UPDATE moodStamps" in call[0][0]:
-            update_call = call
-            break
-    assert update_call is not None
-
-    # Check that value is updated, note uses original, timestamp is updated
-    expected_params = (
-        update_data.value, # New value
-        sample_mood_schema.note, # Original note
-        fixed_time,
-        str(user_id),
-        mood_date,
-    )
-    assert update_call[0][1] == expected_params
-
-    mock_connection.commit.assert_called_once()
-    assert updated_mood is not None
-    assert updated_mood.value == update_data.value
-    assert updated_mood.note == sample_mood_schema.note # Note remains unchanged
-    assert updated_mood.updated_at == fixed_time
-
-
-@pytest.mark.asyncio
-async def test_update_moodstamp_only_note(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_mood_schema: MoodStamp,
-):
-    """Test updating only the note of a moodstamp."""
-    update_data = UpdateMoodStamp(value=None, note="Only note updated") # Only update note
-    user_id = sample_mood_schema.user_id
-    mood_date = sample_mood_schema.date
-    repo = SQLiteMoodRepository(mock_connection)
-
-    original_row_dict = {
-        "id": str(sample_mood_schema.id),
-        "user_id": str(user_id),
-        "date": mood_date,
-        "value": sample_mood_schema.value, # Original value
         "note": sample_mood_schema.note,
         "created_at": sample_mood_schema.created_at,
         "updated_at": sample_mood_schema.updated_at,
@@ -496,11 +417,9 @@ async def test_update_moodstamp_only_note(
         "mood_diary.backend.repositories.sqlite.mood.datetime",
         Mock(now=Mock(return_value=fixed_time)),
     ):
-        # Check the type of the object passed to update
         assert isinstance(update_data, UpdateMoodStamp)
         updated_mood = await repo.update(user_id, mood_date, update_data)
 
-    # Assertions
     update_call = None
     for call in mock_cursor.execute.call_args_list:
         if "UPDATE moodStamps" in call[0][0]:
@@ -508,10 +427,9 @@ async def test_update_moodstamp_only_note(
             break
     assert update_call is not None
 
-    # Check that note is updated, value uses original, timestamp is updated
     expected_params = (
-        sample_mood_schema.value, # Original value
-        update_data.note, # New note
+        update_data.value,
+        sample_mood_schema.note,
         fixed_time,
         str(user_id),
         mood_date,
@@ -520,7 +438,61 @@ async def test_update_moodstamp_only_note(
 
     mock_connection.commit.assert_called_once()
     assert updated_mood is not None
-    assert updated_mood.value == sample_mood_schema.value # Value remains unchanged
+    assert updated_mood.value == update_data.value
+    assert updated_mood.note == sample_mood_schema.note
+    assert updated_mood.updated_at == fixed_time
+
+
+@pytest.mark.asyncio
+async def test_update_moodstamp_only_note(
+        mock_connection: AsyncMock,
+        mock_cursor: MagicMock,
+        sample_mood_schema: MoodStamp,
+):
+    """Test updating only the note of a moodstamp."""
+    update_data = UpdateMoodStamp(value=None, note="Only note updated")
+    user_id = sample_mood_schema.user_id
+    mood_date = sample_mood_schema.date
+    repo = SQLiteMoodRepository(mock_connection)
+
+    original_row_dict = {
+        "id": str(sample_mood_schema.id),
+        "user_id": str(user_id),
+        "date": mood_date,
+        "value": sample_mood_schema.value,
+        "note": sample_mood_schema.note,
+        "created_at": sample_mood_schema.created_at,
+        "updated_at": sample_mood_schema.updated_at,
+    }
+    mock_cursor.fetchone.return_value = original_row_dict
+
+    fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    with patch(
+        "mood_diary.backend.repositories.sqlite.mood.datetime",
+        Mock(now=Mock(return_value=fixed_time)),
+    ):
+        assert isinstance(update_data, UpdateMoodStamp)
+        updated_mood = await repo.update(user_id, mood_date, update_data)
+
+    update_call = None
+    for call in mock_cursor.execute.call_args_list:
+        if "UPDATE moodStamps" in call[0][0]:
+            update_call = call
+            break
+    assert update_call is not None
+
+    expected_params = (
+        sample_mood_schema.value,
+        update_data.note,
+        fixed_time,
+        str(user_id),
+        mood_date,
+    )
+    assert update_call[0][1] == expected_params
+
+    mock_connection.commit.assert_called_once()
+    assert updated_mood is not None
+    assert updated_mood.value == sample_mood_schema.value
     assert updated_mood.note == update_data.note
     assert updated_mood.updated_at == fixed_time
 

@@ -1,22 +1,20 @@
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import Depends, Header, status
+from fastapi import status
 from fastapi.testclient import TestClient
 
 from mood_diary.backend.config import Settings
 from mood_diary.backend.exceptions.user import (
     IncorrectOldPassword,
     IncorrectPasswordOrUserDoesNotExists,
-    InvalidOrExpiredAccessToken,
     InvalidOrExpiredRefreshToken,
     UsernameAlreadyExists,
 )
 from mood_diary.backend.app import get_app
 from mood_diary.backend.routes.dependencies import (
-    get_current_user_id,
     get_token_manager,
     get_user_service,
 )
@@ -62,24 +60,14 @@ def main_app():
 def override_dependencies(
     mock_user_service: AsyncMock, test_token_manager: TokenManager, main_app
 ):
-    # The test_user_id is no longer yielded directly, as the real dependency will extract it
-    # test_user_id = uuid.uuid4() # Remove this fixed UUID if it was only for the mock
-
-    # Remove the mock dependency function
-    # async def mock_get_current_user_id_simple_check(...): ...
 
     main_app.dependency_overrides[get_user_service] = lambda: mock_user_service
     main_app.dependency_overrides[get_token_manager] = (
         lambda: test_token_manager
     )
-    # Do NOT override get_current_user_id here anymore, let the app use the real one
-    # main_app.dependency_overrides[get_current_user_id] = (
-    #     mock_get_current_user_id_simple_check
-    # )
+    
+    yield
 
-    yield # Yield control to the test function
-
-    # Clean up overrides
     main_app.dependency_overrides = {}
 
 
@@ -93,10 +81,9 @@ def client(override_dependencies, main_app):
 def sample_profile_data():
     now = datetime.now(timezone.utc)
     now_iso = now.isoformat().replace("+00:00", "Z")
-    # Use a consistent UUID for sample data generation if needed elsewhere
     test_user_id_for_data = uuid.uuid4()
     return {
-        "id": str(test_user_id_for_data), # Ensure this uses a UUID
+        "id": str(test_user_id_for_data),
         "username": "testuser",
         "name": "Test User",
         "created_at": now_iso,
@@ -128,7 +115,6 @@ def test_register_success(
     response_data = response.json()
     assert response_data["username"] == sample_profile_data["username"]
     assert response_data["name"] == sample_profile_data["name"]
-    # Check Profile response types and format
     assert isinstance(response_data["id"], str)
     assert response_data["id"] == sample_profile_data["id"]
     try:
@@ -615,7 +601,6 @@ def test_update_profile_unauthorized(client: TestClient, override_dependencies):
     assert response.json() == {"detail": "Invalid or expired access token"}
 
 
-# Add test for login validation errors
 def test_login_validation_error(client: TestClient):
     # Min/Max lengths
     valid_min_user = "u" * 3
@@ -796,9 +781,9 @@ def test_get_profile_expired_token(client: TestClient, override_dependencies):
     """Test accessing profile with an expired token."""
     # Create a token manager that issues immediately expiring tokens
     expired_token_manager = JWTTokenManager(
-        secret_key="fixed-test-secret-key", # Must match the app's key
+        secret_key="fixed-test-secret-key",
         algorithm="HS256",
-        access_token_exp_minutes=-1, # Expired
+        access_token_exp_minutes=-1,
         refresh_token_exp_minutes=10,
     )
     user_id = uuid.uuid4()
@@ -834,9 +819,3 @@ def test_get_profile_invalid_token_format(client: TestClient, override_dependenc
     response = client.get("/api/auth/profile", headers=headers)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid or expired access token"}
-
-# --- End of Invalid Token Tests --- #
-
-
-# Test case for invalid scheme remains valid
-# ... existing code ...
