@@ -9,7 +9,7 @@ from mood_diary.backend.routes.mood import router as mood_router
 
 
 def get_app(config) -> FastAPI:
-    @asynccontextmanager
+
     async def lifespan(a: FastAPI):
         if not config.AUTH_TOKEN_SECRET_KEY:
             raise Exception(

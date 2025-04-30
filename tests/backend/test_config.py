@@ -1,7 +1,10 @@
 import os
 import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
 
 from mood_diary.backend.config import Settings
+from mood_diary.backend.app import get_app
 
 RELEVANT_ENV_VARS = [
     "APP_TITLE", "APP_DESCRIPTION", "PASSWORD_HASHING_ENCODING",
@@ -36,6 +39,18 @@ def manage_environ():
 
 def test_settings_default_values():
     """Tests that Settings load default values correctly when no env vars are set."""
+    # Explicitly unset APP_TITLE to ensure we test the default
+    if "APP_TITLE" in os.environ:
+        del os.environ["APP_TITLE"]
+    # Explicitly unset APP_DESCRIPTION to ensure we test the default
+    if "APP_DESCRIPTION" in os.environ:
+        del os.environ["APP_DESCRIPTION"]
+    # Explicitly unset PASSWORD_HASHING_ENCODING to ensure we test the default
+    if "PASSWORD_HASHING_ENCODING" in os.environ:
+        del os.environ["PASSWORD_HASHING_ENCODING"]
+    # Explicitly unset PASSWORD_HASHING_HASH_NAME to ensure we test the default
+    if "PASSWORD_HASHING_HASH_NAME" in os.environ:
+        del os.environ["PASSWORD_HASHING_HASH_NAME"]
     settings = Settings()
 
     assert settings.APP_TITLE == "Mood Diary"
@@ -65,3 +80,23 @@ def test_settings_override_with_env_vars():
     assert settings.AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES == 60
     assert settings.PASSWORD_HASHING_HASH_ITERATIONS == 150000
     assert settings.PASSWORD_HASHING_ENCODING == "utf-8"
+
+
+def test_app_startup_raises_exception_without_secret_key():
+    """Tests that get_app raises an exception during startup if AUTH_TOKEN_SECRET_KEY is not set."""
+    # Ensure the secret key is not set in the environment
+    if "AUTH_TOKEN_SECRET_KEY" in os.environ:
+        del os.environ["AUTH_TOKEN_SECRET_KEY"]
+
+    settings = Settings()
+    # Explicitly set to empty string or None if default is not empty
+    settings.AUTH_TOKEN_SECRET_KEY = ""
+
+    # Attempt to create the app instance first
+    app = get_app(settings)
+
+    # Use TestClient as a context manager to trigger startup/shutdown events
+    with pytest.raises(Exception, match="Please set AUTH_TOKEN_SECRET_KEY environment variable"):
+        with TestClient(app) as client:
+            # The exception should be raised when TestClient initializes
+            pass
