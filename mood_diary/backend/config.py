@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     AUTH_TOKEN_ALGORITHM: str = "HS256"
     AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes
     AUTH_TOKEN_REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
+    AUTH_SECURE_COOKIE: bool = False
 
     ROOT_PATH: str = "/api"
 

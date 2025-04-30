@@ -2,7 +2,6 @@ from uuid import UUID
 
 from mood_diary.backend.exceptions.user import (
     IncorrectPasswordOrUserDoesNotExists,
-    InvalidOrExpiredRefreshToken,
     UserNotFound,
     IncorrectOldPassword,
     UsernameAlreadyExists,
@@ -20,8 +19,6 @@ from mood_diary.common.api.schemas.auth import (
     Profile,
     LoginRequest,
     LoginResponse,
-    RefreshResponse,
-    RefreshRequest,
     ChangePasswordRequest,
     ChangeProfileRequest,
 )
@@ -70,21 +67,6 @@ class UserService:
         return LoginResponse(
             access_token=self.token_manager.create_token(
                 TokenType.ACCESS, user.id
-            ),
-            refresh_token=self.token_manager.create_token(
-                TokenType.REFRESH, user.id
-            ),
-        )
-
-    async def refresh(self, body: RefreshRequest) -> RefreshResponse:
-        token = self.token_manager.decode_token(body.refresh_token)
-
-        if not token or token.type != TokenType.REFRESH:
-            raise InvalidOrExpiredRefreshToken()
-
-        return RefreshResponse(
-            access_token=self.token_manager.create_token(
-                TokenType.ACCESS, token.user_id
             ),
         )
 

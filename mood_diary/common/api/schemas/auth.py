@@ -26,15 +26,6 @@ class LoginRequest(BaseModel):
 
 class LoginResponse(BaseModel):
     access_token: str
-    refresh_token: str
-
-
-class RefreshRequest(BaseModel):
-    refresh_token: str = Field(..., min_length=1)
-
-
-class RefreshResponse(BaseModel):
-    access_token: str
 
 
 class ChangePasswordRequest(BaseModel):
