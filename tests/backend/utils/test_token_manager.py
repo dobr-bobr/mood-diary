@@ -233,7 +233,9 @@ def test_decode_catches_expired_signature_error(
     user_id: uuid.UUID,
 ):
     """Test that decode_token specifically returns None on ExpiredSignatureError."""
-    mock_jwt_decode.side_effect = jwt.ExpiredSignatureError("Token has expired")
+    mock_jwt_decode.side_effect = jwt.ExpiredSignatureError(
+        "Token has expired"
+    )
     token = "any_token_string"
     payload = token_manager.decode_token(token)
     assert payload is None

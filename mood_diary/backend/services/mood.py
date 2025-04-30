@@ -25,7 +25,7 @@ class MoodService:
         self.moodstamp_repository = moodstamp_repository
 
     async def create(
-            self, user_id: UUID, body: CreateMoodStampRequest
+        self, user_id: UUID, body: CreateMoodStampRequest
     ) -> MoodStamp:
         create_moodstamp = CreateMoodStamp(
             user_id=user_id,
@@ -70,7 +70,7 @@ class MoodService:
         )
 
     async def update(
-            self, user_id: UUID, date: date, body: UpdateMoodStampRequest
+        self, user_id: UUID, date: date, body: UpdateMoodStampRequest
     ) -> MoodStamp:
         update_moodstamp = UpdateMoodStamp(
             value=body.value,
@@ -97,7 +97,7 @@ class MoodService:
         )
 
     async def get_many(
-            self, user_id: UUID, body: GetManyMoodStampsRequest
+        self, user_id: UUID, body: GetManyMoodStampsRequest
     ) -> list[MoodStamp]:
         filter = MoodStampFilter(
             start_date=body.start_date,

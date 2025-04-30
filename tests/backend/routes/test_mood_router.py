@@ -6,7 +6,10 @@ import pytest
 from fastapi import FastAPI, status
 from fastapi.testclient import TestClient
 
-from mood_diary.backend.exceptions.mood import MoodStampAlreadyExists, MoodStampNotExist
+from mood_diary.backend.exceptions.mood import (
+    MoodStampAlreadyExists,
+    MoodStampNotExist,
+)
 from mood_diary.backend.routes.dependencies import (
     get_mood_service,
     get_current_user_id,
@@ -26,6 +29,7 @@ from mood_diary.backend.routes.mood import router as mood_router
 
 
 # --- Fixtures ---
+
 
 @pytest.fixture
 def mock_mood_service() -> AsyncMock:
@@ -47,9 +51,9 @@ def main_app() -> FastAPI:
 # Fixture to override dependencies specifically for mood tests
 @pytest.fixture
 def override_mood_dependencies(
-    main_app: FastAPI, # Depend on the real app
+    main_app: FastAPI,  # Depend on the real app
     test_user_id: uuid.UUID,
-    mock_mood_service: AsyncMock
+    mock_mood_service: AsyncMock,
 ):
     async def override_get_current_user_id() -> uuid.UUID:
         return test_user_id
@@ -57,10 +61,12 @@ def override_mood_dependencies(
     def override_get_mood_service() -> MoodService:
         return mock_mood_service
 
-    main_app.dependency_overrides[get_current_user_id] = override_get_current_user_id
+    main_app.dependency_overrides[get_current_user_id] = (
+        override_get_current_user_id
+    )
     main_app.dependency_overrides[get_mood_service] = override_get_mood_service
 
-    yield # Allow tests to run with overrides
+    yield  # Allow tests to run with overrides
 
     # Clean up overrides after tests
     main_app.dependency_overrides = {}
@@ -93,39 +99,45 @@ def sample_mood_stamp_data(test_user_id: uuid.UUID) -> dict:
 def sample_mood_stamp_schema(sample_mood_stamp_data: dict) -> MoodStampSchema:
     data = sample_mood_stamp_data.copy()
     data["date"] = date.fromisoformat(data["date"])
-    data["created_at"] = datetime.fromisoformat(data["created_at"].replace("Z", "+00:00"))
-    data["updated_at"] = datetime.fromisoformat(data["updated_at"].replace("Z", "+00:00"))
+    data["created_at"] = datetime.fromisoformat(
+        data["created_at"].replace("Z", "+00:00")
+    )
+    data["updated_at"] = datetime.fromisoformat(
+        data["updated_at"].replace("Z", "+00:00")
+    )
     return MoodStampSchema(**data)
 
 
 # --- Test Cases ---
 
+
 def test_create_moodstamp_success(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
-        sample_mood_stamp_schema: MoodStampSchema,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
+    sample_mood_stamp_schema: MoodStampSchema,
 ):
     mock_mood_service.create.return_value = sample_mood_stamp_schema
     today_str = sample_mood_stamp_schema.date.isoformat()
 
-    create_payload = {"date": today_str,
-                      "user_id": str(test_user_id),
-                      "value": 5,
-                      "note": "Feeling good today!"
-                      }
+    create_payload = {
+        "date": today_str,
+        "user_id": str(test_user_id),
+        "value": 5,
+        "note": "Feeling good today!",
+    }
     response = client_mood.post("/api/mood/", json=create_payload)
 
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
-    assert response_data == sample_mood_stamp_schema.model_dump(mode='json')
+    assert response_data == sample_mood_stamp_schema.model_dump(mode="json")
 
     mock_mood_service.create.assert_awaited_once()
     call_args = mock_mood_service.create.call_args[1]
-    assert call_args['user_id'] == test_user_id
-    assert isinstance(call_args['body'], CreateMoodStampRequest)
-    assert call_args['body'].value == create_payload["value"]
-    assert call_args['body'].note == create_payload["note"]
+    assert call_args["user_id"] == test_user_id
+    assert isinstance(call_args["body"], CreateMoodStampRequest)
+    assert call_args["body"].value == create_payload["value"]
+    assert call_args["body"].note == create_payload["note"]
 
 
 @pytest.mark.parametrize(
@@ -135,23 +147,35 @@ def test_create_moodstamp_success(
         ({"value": 1, "note": "Min value"}, status.HTTP_200_OK),
         ({"value": 10, "note": "Max value"}, status.HTTP_200_OK),
         # Invalid values (outside 1-10)
-        ({"value": 0, "note": "Too low"}, status.HTTP_422_UNPROCESSABLE_ENTITY),
-        ({"value": 11, "note": "Too high"}, status.HTTP_422_UNPROCESSABLE_ENTITY),
+        (
+            {"value": 0, "note": "Too low"},
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
+        (
+            {"value": 11, "note": "Too high"},
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
         # Invalid type
-        ({"value": "not-an-int", "note": "Wrong type"}, status.HTTP_422_UNPROCESSABLE_ENTITY),
+        (
+            {"value": "not-an-int", "note": "Wrong type"},
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),
         # Missing value
         ({"note": "Missing value"}, status.HTTP_422_UNPROCESSABLE_ENTITY),
         # Missing note (should be ok, assuming default or handling)
-        ({"value": 5}, status.HTTP_422_UNPROCESSABLE_ENTITY), # Test missing note
-    ]
+        (
+            {"value": 5},
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+        ),  # Test missing note
+    ],
 )
 def test_create_moodstamp_validation_error(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock, # Add mock service to handle valid cases
-        test_user_id: uuid.UUID,
-        sample_mood_stamp_schema: MoodStampSchema, # Needed for valid cases
-        payload_update: dict,
-        expected_status: int,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,  # Add mock service to handle valid cases
+    test_user_id: uuid.UUID,
+    sample_mood_stamp_schema: MoodStampSchema,  # Needed for valid cases
+    payload_update: dict,
+    expected_status: int,
 ):
     """Tests validation errors and boundary values for creating moodstamps."""
     today_str = date.today().isoformat()
@@ -165,15 +189,19 @@ def test_create_moodstamp_validation_error(
     if expected_status == status.HTTP_200_OK:
         # Use sample schema but update value/note from payload if they exist
         schema_dict = sample_mood_stamp_schema.model_dump()
-        if "value" in payload: schema_dict["value"] = payload["value"]
-        if "note" in payload: schema_dict["note"] = payload["note"]
+        if "value" in payload:
+            schema_dict["value"] = payload["value"]
+        if "note" in payload:
+            schema_dict["note"] = payload["note"]
         schema_dict["date"] = date.fromisoformat(today_str)
         mock_mood_service.create.return_value = MoodStampSchema(**schema_dict)
-        mock_mood_service.create.side_effect = None # Ensure no side effect is active
+        mock_mood_service.create.side_effect = (
+            None  # Ensure no side effect is active
+        )
     elif expected_status == status.HTTP_422_UNPROCESSABLE_ENTITY:
         # Ensure the service is not called for validation errors
         mock_mood_service.create.reset_mock()
-        mock_mood_service.create.side_effect = None # Just in case
+        mock_mood_service.create.side_effect = None  # Just in case
 
     response = client_mood.post("/api/mood/", json=payload)
 
@@ -190,9 +218,9 @@ def test_create_moodstamp_validation_error(
 
 
 def test_create_moodstamp_already_exists(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
 ):
     mock_mood_service.create.side_effect = MoodStampAlreadyExists()
 
@@ -200,7 +228,7 @@ def test_create_moodstamp_already_exists(
         "date": date.today().isoformat(),
         "user_id": str(test_user_id),
         "value": 3,
-        "note": "Already here"
+        "note": "Already here",
     }
     # Test that the specific exception from the service translates to the correct HTTP response
     response = client_mood.post("/api/mood/", json=create_payload)
@@ -210,10 +238,10 @@ def test_create_moodstamp_already_exists(
 
 
 def test_get_moodstamp_success(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
-        sample_mood_stamp_schema: MoodStampSchema,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
+    sample_mood_stamp_schema: MoodStampSchema,
 ):
     test_date = sample_mood_stamp_schema.date
     test_date_str = test_date.isoformat()
@@ -222,14 +250,16 @@ def test_get_moodstamp_success(
     response = client_mood.get(f"/api/mood/{test_date_str}")
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == sample_mood_stamp_schema.model_dump(mode='json')
-    mock_mood_service.get.assert_awaited_once_with(user_id=test_user_id, date=test_date)
+    assert response.json() == sample_mood_stamp_schema.model_dump(mode="json")
+    mock_mood_service.get.assert_awaited_once_with(
+        user_id=test_user_id, date=test_date
+    )
 
 
 def test_get_moodstamp_not_found(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
 ):
     test_date = date.today()
     test_date_str = test_date.isoformat()
@@ -239,35 +269,39 @@ def test_get_moodstamp_not_found(
     response = client_mood.get(f"/api/mood/{test_date_str}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "MoodStamp does not exist"}
-    mock_mood_service.get.assert_awaited_once_with(user_id=test_user_id, date=test_date)
+    mock_mood_service.get.assert_awaited_once_with(
+        user_id=test_user_id, date=test_date
+    )
 
 
 def test_get_many_moodstamps_success_no_filters(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
-        sample_mood_stamp_schema: MoodStampSchema,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
+    sample_mood_stamp_schema: MoodStampSchema,
 ):
     mock_mood_service.get_many.return_value = [sample_mood_stamp_schema]
 
     response = client_mood.get("/api/mood/")
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == [sample_mood_stamp_schema.model_dump(mode='json')]
+    assert response.json() == [
+        sample_mood_stamp_schema.model_dump(mode="json")
+    ]
     mock_mood_service.get_many.assert_awaited_once()
     call_args = mock_mood_service.get_many.call_args[1]
-    assert call_args['user_id'] == test_user_id
-    assert isinstance(call_args['body'], GetManyMoodStampsRequest)
-    assert call_args['body'].start_date is None
-    assert call_args['body'].end_date is None
-    assert call_args['body'].value is None
+    assert call_args["user_id"] == test_user_id
+    assert isinstance(call_args["body"], GetManyMoodStampsRequest)
+    assert call_args["body"].start_date is None
+    assert call_args["body"].end_date is None
+    assert call_args["body"].value is None
 
 
 def test_get_many_moodstamps_success_with_filters(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
-        sample_mood_stamp_schema: MoodStampSchema,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
+    sample_mood_stamp_schema: MoodStampSchema,
 ):
     mock_mood_service.get_many.return_value = [sample_mood_stamp_schema]
     start_date_str = "2023-01-01"
@@ -275,36 +309,51 @@ def test_get_many_moodstamps_success_with_filters(
     value_filter = 5
 
     response = client_mood.get(
-        f"/api/mood/?start_date={start_date_str}&end_date={end_date_str}&value={value_filter}")
+        f"/api/mood/?start_date={start_date_str}&end_date={end_date_str}&value={value_filter}"
+    )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == [sample_mood_stamp_schema.model_dump(mode='json')]
+    assert response.json() == [
+        sample_mood_stamp_schema.model_dump(mode="json")
+    ]
     mock_mood_service.get_many.assert_awaited_once()
     call_args = mock_mood_service.get_many.call_args[1]
-    assert call_args['user_id'] == test_user_id
-    assert isinstance(call_args['body'], GetManyMoodStampsRequest)
-    assert call_args['body'].start_date == date.fromisoformat(start_date_str)
-    assert call_args['body'].end_date == date.fromisoformat(end_date_str)
-    assert call_args['body'].value == value_filter
+    assert call_args["user_id"] == test_user_id
+    assert isinstance(call_args["body"], GetManyMoodStampsRequest)
+    assert call_args["body"].start_date == date.fromisoformat(start_date_str)
+    assert call_args["body"].end_date == date.fromisoformat(end_date_str)
+    assert call_args["body"].value == value_filter
 
 
 @pytest.mark.parametrize(
     "query_params, expected_status, expected_loc",
     [
         # Invalid start_date format
-        ({"start_date": "not-a-date"}, status.HTTP_422_UNPROCESSABLE_ENTITY, ["query", "start_date"]),
+        (
+            {"start_date": "not-a-date"},
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            ["query", "start_date"],
+        ),
         # Invalid end_date format
-        ({"end_date": "invalid-date"}, status.HTTP_422_UNPROCESSABLE_ENTITY, ["query", "end_date"]),
+        (
+            {"end_date": "invalid-date"},
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            ["query", "end_date"],
+        ),
         # Invalid value format
-        ({"value": "not-an-int"}, status.HTTP_422_UNPROCESSABLE_ENTITY, ["query", "value"]),
-    ]
+        (
+            {"value": "not-an-int"},
+            status.HTTP_422_UNPROCESSABLE_ENTITY,
+            ["query", "value"],
+        ),
+    ],
 )
 def test_get_many_moodstamps_validation_error(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        query_params: dict,
-        expected_status: int,
-        expected_loc: list[str],
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    query_params: dict,
+    expected_status: int,
+    expected_loc: list[str],
 ):
     """Tests validation errors for query parameters in get_many_moodstamps."""
     response = client_mood.get("/api/mood/", params=query_params)
@@ -320,44 +369,45 @@ def test_get_many_moodstamps_validation_error(
             if detail.get("loc") == expected_loc:
                 found_error = True
                 break
-        assert found_error, f"Expected error detail for loc '{expected_loc}' not found in {details}"
+        assert (
+            found_error
+        ), f"Expected error detail for loc '{expected_loc}' not found in {details}"
         # Ensure service not called
         mock_mood_service.get_many.assert_not_awaited()
 
 
 def test_update_moodstamp_success(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
-        sample_mood_stamp_schema: MoodStampSchema,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
+    sample_mood_stamp_schema: MoodStampSchema,
 ):
     test_date = sample_mood_stamp_schema.date
     test_date_str = test_date.isoformat()
-    update_payload = {
-        "value": 4,
-        "note": "Updated note"
-    }
+    update_payload = {"value": 4, "note": "Updated note"}
     updated_schema = sample_mood_stamp_schema.model_copy(update=update_payload)
     mock_mood_service.update.return_value = updated_schema
 
-    response = client_mood.put(f"/api/mood/{test_date_str}", json=update_payload)
+    response = client_mood.put(
+        f"/api/mood/{test_date_str}", json=update_payload
+    )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == updated_schema.model_dump(mode='json')
+    assert response.json() == updated_schema.model_dump(mode="json")
 
     mock_mood_service.update.assert_awaited_once()
     call_args = mock_mood_service.update.call_args[1]
-    assert call_args['user_id'] == test_user_id
-    assert call_args['date'] == test_date
-    assert isinstance(call_args['body'], UpdateMoodStampRequest)
-    assert call_args['body'].value == update_payload["value"]
-    assert call_args['body'].note == update_payload["note"]
+    assert call_args["user_id"] == test_user_id
+    assert call_args["date"] == test_date
+    assert isinstance(call_args["body"], UpdateMoodStampRequest)
+    assert call_args["body"].value == update_payload["value"]
+    assert call_args["body"].note == update_payload["note"]
 
 
 def test_update_moodstamp_not_found(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
 ):
     test_date = date.today()
     test_date_str = test_date.isoformat()
@@ -365,7 +415,9 @@ def test_update_moodstamp_not_found(
     mock_mood_service.update.side_effect = MoodStampNotExist
 
     # Test that the specific exception from the service translates to the correct HTTP response
-    response = client_mood.put(f"/api/mood/{test_date_str}", json=update_payload)
+    response = client_mood.put(
+        f"/api/mood/{test_date_str}", json=update_payload
+    )
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "MoodStamp does not exist"}
     mock_mood_service.update.assert_awaited_once()
@@ -379,12 +431,12 @@ def test_update_moodstamp_not_found(
         # Invalid value range
         ({"value": 0, "note": "Too low"}, "greater_than_equal"),
         ({"value": 11, "note": "Too high"}, "less_than_equal"),
-    ]
+    ],
 )
 def test_update_moodstamp_validation_error(
-        client_mood: TestClient,
-        payload: dict,
-        expected_detail_contains: str,
+    client_mood: TestClient,
+    payload: dict,
+    expected_detail_contains: str,
 ):
     """Tests validation errors for updating moodstamps."""
     test_date = date.today()
@@ -400,18 +452,21 @@ def test_update_moodstamp_validation_error(
     found_error = False
     for detail in details:
         # Check in 'type' field or 'msg' field for the expected error string
-        if expected_detail_contains in detail.get("type", "") or \
-           expected_detail_contains in detail.get("msg", ""):
+        if expected_detail_contains in detail.get(
+            "type", ""
+        ) or expected_detail_contains in detail.get("msg", ""):
             found_error = True
             break
-    assert found_error, f"Expected error detail containing '{expected_detail_contains}' not found in {details}"
+    assert (
+        found_error
+    ), f"Expected error detail containing '{expected_detail_contains}' not found in {details}"
 
 
 def test_delete_moodstamp_success(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
-        sample_mood_stamp_schema: MoodStampSchema,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
+    sample_mood_stamp_schema: MoodStampSchema,
 ):
     test_date = sample_mood_stamp_schema.date
     test_date_str = test_date.isoformat()
@@ -422,13 +477,15 @@ def test_delete_moodstamp_success(
     assert response.status_code == status.HTTP_200_OK
     # Check that the response body is JSON null for successful delete
     assert response.json() is None
-    mock_mood_service.delete.assert_awaited_once_with(user_id=test_user_id, date=test_date)
+    mock_mood_service.delete.assert_awaited_once_with(
+        user_id=test_user_id, date=test_date
+    )
 
 
 def test_delete_moodstamp_not_found(
-        client_mood: TestClient,
-        mock_mood_service: AsyncMock,
-        test_user_id: uuid.UUID,
+    client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
 ):
     test_date = date.today()
     test_date_str = test_date.isoformat()
@@ -438,4 +495,6 @@ def test_delete_moodstamp_not_found(
     response = client_mood.delete(f"/api/mood/{test_date_str}")
     assert response.status_code == status.HTTP_404_NOT_FOUND
     assert response.json() == {"detail": "MoodStamp does not exist"}
-    mock_mood_service.delete.assert_awaited_once_with(user_id=test_user_id, date=test_date)
+    mock_mood_service.delete.assert_awaited_once_with(
+        user_id=test_user_id, date=test_date
+    )

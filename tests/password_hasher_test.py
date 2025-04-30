@@ -71,13 +71,15 @@ def test_verify_bytes_password_input(password_hasher: SaltPasswordHasher):
     password = "mysecretpassword"
     password_bytes = password.encode(password_hasher.encoding)
     hashed = password_hasher.hash(password)
-    result = password_hasher.verify(password_bytes, hashed)  # Test bytes input directly
+    result = password_hasher.verify(
+        password_bytes, hashed
+    )  # Test bytes input directly
     assert result is True
 
 
 def test_hash_invalid_utf8_bytes_input(password_hasher: SaltPasswordHasher):
     """Test hashing bytes that are not valid UTF-8."""
-    invalid_utf8_bytes = b"\x80abc" # \x80 is not a valid start byte in UTF-8
+    invalid_utf8_bytes = b"\x80abc"  # \x80 is not a valid start byte in UTF-8
     # Expect hash to still work as it should process raw bytes
     hashed = password_hasher.hash(invalid_utf8_bytes)
     assert isinstance(hashed, str)

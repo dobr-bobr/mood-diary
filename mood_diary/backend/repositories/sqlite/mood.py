@@ -56,7 +56,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         return None
 
     async def get_many(
-            self, user_id: UUID, body: MoodStampFilter
+        self, user_id: UUID, body: MoodStampFilter
     ) -> list[MoodStamp]:
         cursor = self.connection.cursor()
         query = "SELECT * FROM moodStamps WHERE user_id = ?"
@@ -88,9 +88,7 @@ class SQLiteMoodRepository(MoodStampRepository):
             for row in rows
         ]
 
-    async def create(
-            self, user_id: UUID, body: CreateMoodStamp
-    ) -> MoodStamp:
+    async def create(self, user_id: UUID, body: CreateMoodStamp) -> MoodStamp:
         """
         Create new moodstamp.
         Returns None if moodstamp with the same entry date already exists
@@ -135,7 +133,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         )
 
     async def update(
-            self, user_id: UUID, date: date, body: UpdateMoodStamp
+        self, user_id: UUID, date: date, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """Update moodstamp by date. Returns None if moodstamp not found"""
         cursor = self.connection.cursor()
@@ -181,9 +179,7 @@ class SQLiteMoodRepository(MoodStampRepository):
             updated_at=updated_at,
         )
 
-    async def delete(
-            self, user_id: UUID, date: date
-    ) -> MoodStamp | None:
+    async def delete(self, user_id: UUID, date: date) -> MoodStamp | None:
         """Delete moodstamp by date. Returns None if stamp not found"""
         cursor = self.connection.cursor()
 

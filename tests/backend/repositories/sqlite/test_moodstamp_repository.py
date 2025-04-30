@@ -16,6 +16,7 @@ from mood_diary.backend.repositories.sсhemas.mood import (
 
 # --- Fixtures ---
 
+
 @pytest.fixture
 def mood_repo(mock_connection):
     repo = SQLiteMoodRepository(mock_connection)
@@ -56,23 +57,26 @@ def sample_mood_schema(sample_mood_data):
 
 
 def test_init_db(
-        mood_repo: SQLiteMoodRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
+    mood_repo: SQLiteMoodRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
 ):
     mood_repo.init_db()
     mock_connection.cursor.assert_called_once()
     mock_cursor.execute.assert_called_once_with(ANY)
-    assert "CREATE TABLE IF NOT EXISTS moodstamps" in mock_cursor.execute.call_args[0][0]
+    assert (
+        "CREATE TABLE IF NOT EXISTS moodstamps"
+        in mock_cursor.execute.call_args[0][0]
+    )
     mock_connection.commit.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_get_moodstamp_found(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_mood_data: tuple,
-        sample_mood_schema: MoodStamp,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_mood_data: tuple,
+    sample_mood_schema: MoodStamp,
 ):
     user_id = sample_mood_schema.user_id
     mood_date = sample_mood_schema.date
@@ -107,8 +111,8 @@ async def test_get_moodstamp_found(
 
 @pytest.mark.asyncio
 async def test_get_moodstamp_not_found(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
 ):
     user_id = uuid.uuid4()
     mood_date = date.today()
@@ -124,9 +128,9 @@ async def test_get_moodstamp_not_found(
 
 @pytest.mark.asyncio
 async def test_get_many_moodstamps(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_mood_data: tuple,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_mood_data: tuple,
 ):
     user_id = uuid.uuid4()
     filter_body = MoodStampFilter(start_date=None, end_date=None, value=None)
@@ -160,41 +164,45 @@ async def test_get_many_moodstamps(
 @pytest.mark.parametrize(
     "filter_input, expected_sql_clauses, expected_params_indices",
     [
+        (MoodStampFilter(start_date=None, end_date=None, value=None), [], [0]),
         (
-            MoodStampFilter(start_date=None, end_date=None, value=None),
-            [],
-            [0]
-        ),
-        (
-            MoodStampFilter(start_date=date(2024, 1, 1), end_date=None, value=None),
+            MoodStampFilter(
+                start_date=date(2024, 1, 1), end_date=None, value=None
+            ),
             ["AND date >= ?"],
-            [0, 1]
+            [0, 1],
         ),
         (
-            MoodStampFilter(start_date=None, end_date=date(2024, 12, 31), value=None),
+            MoodStampFilter(
+                start_date=None, end_date=date(2024, 12, 31), value=None
+            ),
             ["AND date <= ?"],
-            [0, 1]
+            [0, 1],
         ),
         (
             MoodStampFilter(start_date=None, end_date=None, value=7),
             ["AND value = ?"],
-            [0, 1]
+            [0, 1],
         ),
         (
-            MoodStampFilter(start_date=date(2024, 1, 1), end_date=date(2024, 1, 31), value=5),
+            MoodStampFilter(
+                start_date=date(2024, 1, 1),
+                end_date=date(2024, 1, 31),
+                value=5,
+            ),
             ["AND date >= ?", "AND date <= ?", "AND value = ?"],
-            [0, 1, 2, 3]
+            [0, 1, 2, 3],
         ),
-    ]
+    ],
 )
 @pytest.mark.asyncio
 async def test_get_many_moodstamps_filtered(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_mood_data: tuple,
-        filter_input: MoodStampFilter,
-        expected_sql_clauses: list[str],
-        expected_params_indices: list[int],
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_mood_data: tuple,
+    filter_input: MoodStampFilter,
+    expected_sql_clauses: list[str],
+    expected_params_indices: list[int],
 ):
     user_id = uuid.uuid4()
     mock_cursor.fetchall.return_value = [
@@ -222,9 +230,12 @@ async def test_get_many_moodstamps_filtered(
         assert clause in actual_sql
 
     expected_params: list[Union[str, date, int]] = [str(user_id)]
-    if filter_input.start_date: expected_params.append(filter_input.start_date)
-    if filter_input.end_date: expected_params.append(filter_input.end_date)
-    if filter_input.value: expected_params.append(filter_input.value)
+    if filter_input.start_date:
+        expected_params.append(filter_input.start_date)
+    if filter_input.end_date:
+        expected_params.append(filter_input.end_date)
+    if filter_input.value:
+        expected_params.append(filter_input.value)
 
     assert len(actual_params) == len(expected_params)
     assert list(actual_params) == expected_params
@@ -236,9 +247,9 @@ async def test_get_many_moodstamps_filtered(
 
 @pytest.mark.asyncio
 async def test_create_moodstamp_success(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_mood_schema: MoodStamp,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_mood_schema: MoodStamp,
 ):
     create_data = CreateMoodStamp(
         user_id=sample_mood_schema.user_id,
@@ -251,15 +262,20 @@ async def test_create_moodstamp_success(
 
     fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
-    with patch(
+    with (
+        patch(
             "mood_diary.backend.repositories.sqlite.mood.uuid4",
             return_value=sample_mood_schema.id,
-    ), patch(
-        "mood_diary.backend.repositories.sqlite.mood.datetime",
-        Mock(now=Mock(return_value=fixed_time)),
+        ),
+        patch(
+            "mood_diary.backend.repositories.sqlite.mood.datetime",
+            Mock(now=Mock(return_value=fixed_time)),
+        ),
     ):
         assert isinstance(create_data, CreateMoodStamp)
-        created_mood = await repo.create(sample_mood_schema.user_id, create_data)
+        created_mood = await repo.create(
+            sample_mood_schema.user_id, create_data
+        )
 
     mock_connection.cursor.assert_called()
     assert mock_cursor.execute.call_count >= 2
@@ -269,7 +285,9 @@ async def test_create_moodstamp_success(
         if "INSERT INTO moodStamps" in call[0][0]:
             insert_call = call
             break
-    assert insert_call is not None, "INSERT statement not found in execute calls"
+    assert (
+        insert_call is not None
+    ), "INSERT statement not found in execute calls"
 
     assert "INSERT INTO moodStamps" in insert_call[0][0]
     expected_params = (
@@ -296,8 +314,8 @@ async def test_create_moodstamp_success(
 
 @pytest.mark.asyncio
 async def test_create_moodstamp_duplicate(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
 ):
     create_data = CreateMoodStamp(
         user_id=uuid.uuid4(),
@@ -309,7 +327,9 @@ async def test_create_moodstamp_duplicate(
 
     repo = SQLiteMoodRepository(mock_connection)
 
-    from mood_diary.backend.exceptions.mood import MoodStampAlreadyExistsErrorRepo
+    from mood_diary.backend.exceptions.mood import (
+        MoodStampAlreadyExistsErrorRepo,
+    )
 
     with pytest.raises(MoodStampAlreadyExistsErrorRepo):
         await repo.create(create_data.user_id, create_data)
@@ -325,9 +345,9 @@ async def test_create_moodstamp_duplicate(
 
 @pytest.mark.asyncio
 async def test_update_moodstamp_success(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_mood_schema: MoodStamp,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_mood_schema: MoodStamp,
 ):
     update_data = UpdateMoodStamp(value=7, note="Updated note")
     user_id = sample_mood_schema.user_id
@@ -365,7 +385,7 @@ async def test_update_moodstamp_success(
 
     assert select_call is not None
     assert select_call[0][1] == (str(user_id), mood_date)
-    
+
     assert update_call is not None
     expected_params = (
         update_data.value,
@@ -391,9 +411,9 @@ async def test_update_moodstamp_success(
 
 @pytest.mark.asyncio
 async def test_update_moodstamp_only_value(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_mood_schema: MoodStamp,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_mood_schema: MoodStamp,
 ):
     """Test updating only the value of a moodstamp."""
     update_data = UpdateMoodStamp(value=9, note=None)
@@ -445,9 +465,9 @@ async def test_update_moodstamp_only_value(
 
 @pytest.mark.asyncio
 async def test_update_moodstamp_only_note(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_mood_schema: MoodStamp,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_mood_schema: MoodStamp,
 ):
     """Test updating only the note of a moodstamp."""
     update_data = UpdateMoodStamp(value=None, note="Only note updated")
@@ -499,8 +519,8 @@ async def test_update_moodstamp_only_note(
 
 @pytest.mark.asyncio
 async def test_update_moodstamp_not_found(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
 ):
     user_id = uuid.uuid4()
     mood_date = date.today()
@@ -518,9 +538,9 @@ async def test_update_moodstamp_not_found(
 
 @pytest.mark.asyncio
 async def test_delete_moodstamp_success(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_mood_schema: MoodStamp,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_mood_schema: MoodStamp,
 ):
     user_id = sample_mood_schema.user_id
     mood_date = sample_mood_schema.date
@@ -557,8 +577,8 @@ async def test_delete_moodstamp_success(
 
 @pytest.mark.asyncio
 async def test_delete_moodstamp_not_found(
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
 ):
     user_id = uuid.uuid4()
     mood_date = date.today()

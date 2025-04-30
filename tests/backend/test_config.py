@@ -7,14 +7,21 @@ from mood_diary.backend.config import Settings
 from mood_diary.backend.app import get_app
 
 RELEVANT_ENV_VARS = [
-    "APP_TITLE", "APP_DESCRIPTION", "PASSWORD_HASHING_ENCODING",
-    "PASSWORD_HASHING_HASH_NAME", "PASSWORD_HASHING_HASH_ITERATIONS",
-    "PASSWORD_HASHING_SALT_SIZE", "PASSWORD_HASHING_SPLIT_CHAR",
-    "AUTH_TOKEN_SECRET_KEY", "AUTH_TOKEN_ALGORITHM",
+    "APP_TITLE",
+    "APP_DESCRIPTION",
+    "PASSWORD_HASHING_ENCODING",
+    "PASSWORD_HASHING_HASH_NAME",
+    "PASSWORD_HASHING_HASH_ITERATIONS",
+    "PASSWORD_HASHING_SALT_SIZE",
+    "PASSWORD_HASHING_SPLIT_CHAR",
+    "AUTH_TOKEN_SECRET_KEY",
+    "AUTH_TOKEN_ALGORITHM",
     "AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES",
-    "AUTH_TOKEN_REFRESH_TOKEN_EXPIRE_MINUTES", "ROOT_PATH",
-    "SQLITE_DB_PATH"
+    "AUTH_TOKEN_REFRESH_TOKEN_EXPIRE_MINUTES",
+    "ROOT_PATH",
+    "SQLITE_DB_PATH",
 ]
+
 
 @pytest.fixture(autouse=True)
 def manage_environ():
@@ -96,6 +103,9 @@ def test_app_startup_raises_exception_without_secret_key():
     app = get_app(settings)
 
     # Use TestClient as a context manager to trigger startup/shutdown events
-    with pytest.raises(Exception, match="Please set AUTH_TOKEN_SECRET_KEY environment variable"):
+    with pytest.raises(
+        Exception,
+        match="Please set AUTH_TOKEN_SECRET_KEY environment variable",
+    ):
         with TestClient(app) as client:
             pass
