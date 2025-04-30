@@ -30,15 +30,11 @@ def test_get_token_manager(monkeypatch):
     test_secret = "test-secret-key-for-this-test"
     test_algo = "HS512"
     test_access_exp = 15
-    test_refresh_exp = 60
 
     monkeypatch.setattr(config, "AUTH_TOKEN_SECRET_KEY", test_secret)
     monkeypatch.setattr(config, "AUTH_TOKEN_ALGORITHM", test_algo)
     monkeypatch.setattr(
         config, "AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES", test_access_exp
-    )
-    monkeypatch.setattr(
-        config, "AUTH_TOKEN_REFRESH_TOKEN_EXPIRE_MINUTES", test_refresh_exp
     )
 
     token_manager = dependencies.get_token_manager()
@@ -48,10 +44,6 @@ def test_get_token_manager(monkeypatch):
     assert token_manager.algorithm == test_algo
     assert (
         token_manager.access_token_exp.total_seconds() == test_access_exp * 60
-    )
-    assert (
-        token_manager.refresh_token_exp.total_seconds()
-        == test_refresh_exp * 60
     )
 
 
@@ -80,38 +72,18 @@ def test_get_current_user_id_success():
         type=TokenType.ACCESS, user_id=test_user_id, iat=1000, exp=9999999999
     )
     user_id = dependencies.get_current_user_id(
-        authorization="Bearer valid_token", token_manager=mock_token_manager
+        access_token="valid_token", token_manager=mock_token_manager
     )
     mock_token_manager.decode_token.assert_called_once_with("valid_token")
     assert user_id == test_user_id
 
 
-def test_get_current_user_id_no_auth_header():
-    """Test raising exception when Authorization header is missing."""
+def test_get_current_user_id_no_cookie():
+    """Test raising exception when access_token cookie is missing."""
     mock_token_manager = MagicMock(spec=TokenManager)
     with pytest.raises(InvalidOrExpiredAccessToken):
         dependencies.get_current_user_id(
-            authorization=None, token_manager=mock_token_manager
-        )
-    mock_token_manager.decode_token.assert_not_called()
-
-
-def test_get_current_user_id_wrong_scheme():
-    """Test raising exception with incorrect header scheme (e.g., Basic)."""
-    mock_token_manager = MagicMock(spec=TokenManager)
-    with pytest.raises(InvalidOrExpiredAccessToken):
-        dependencies.get_current_user_id(
-            authorization="Basic some_token", token_manager=mock_token_manager
-        )
-    mock_token_manager.decode_token.assert_not_called()
-
-
-def test_get_current_user_id_no_bearer_prefix():
-    """Test raising exception if 'Bearer ' prefix is missing."""
-    mock_token_manager = MagicMock(spec=TokenManager)
-    with pytest.raises(InvalidOrExpiredAccessToken):
-        dependencies.get_current_user_id(
-            authorization="just_a_token", token_manager=mock_token_manager
+            access_token=None, token_manager=mock_token_manager
         )
     mock_token_manager.decode_token.assert_not_called()
 
@@ -122,27 +94,10 @@ def test_get_current_user_id_invalid_token():
     mock_token_manager.decode_token.return_value = None
     with pytest.raises(InvalidOrExpiredAccessToken):
         dependencies.get_current_user_id(
-            authorization="Bearer invalid_token",
+            access_token="invalid_token",
             token_manager=mock_token_manager,
         )
     mock_token_manager.decode_token.assert_called_once_with("invalid_token")
-
-
-def test_get_current_user_id_wrong_token_type():
-    """Test raising exception if decoded token is not an ACCESS token."""
-    mock_token_manager = MagicMock(spec=TokenManager)
-    test_user_id = uuid.uuid4()
-    mock_token_manager.decode_token.return_value = TokenPayload(
-        type=TokenType.REFRESH, user_id=test_user_id, iat=1000, exp=9999999999
-    )
-    with pytest.raises(InvalidOrExpiredAccessToken):
-        dependencies.get_current_user_id(
-            authorization="Bearer refresh_token_here",
-            token_manager=mock_token_manager,
-        )
-    mock_token_manager.decode_token.assert_called_once_with(
-        "refresh_token_here"
-    )
 
 
 def test_get_connection(monkeypatch):

@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    command: ["uvicorn", "mood_diary.backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    command: ["poetry", "run", "uvicorn", "mood_diary.backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
     volumes:
       - db_data:/app/data
     logging:
@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
     env_file:
       - .env
-    command: ["streamlit", "run", "mood_diary/frontend/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
+    command: ["poetry", "run", "streamlit", "run", "mood_diary/frontend/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
     logging:
       driver: "json-file"
       options:

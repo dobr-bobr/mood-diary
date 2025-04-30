@@ -7,7 +7,6 @@ import pytest
 from mood_diary.backend.exceptions.user import (
     IncorrectOldPassword,
     IncorrectPasswordOrUserDoesNotExists,
-    InvalidOrExpiredRefreshToken,
     UsernameAlreadyExists,
     UserNotFound,
 )
@@ -23,7 +22,6 @@ from mood_diary.common.api.schemas.auth import (
     ChangePasswordRequest,
     ChangeProfileRequest,
     LoginRequest,
-    RefreshRequest,
     RegisterRequest,
 )
 
@@ -46,7 +44,7 @@ def mock_token_manager():
     mock = Mock()
     mock.create_token.side_effect = lambda type, uid: f"{type.value}-{uid}"
     mock.decode_token.return_value = TokenPayload(
-        type=TokenType.REFRESH,
+        type=TokenType.ACCESS,
         user_id=uuid.uuid4(),
         iat=int(datetime.now(timezone.utc).timestamp()),
         exp=int(datetime.now(timezone.utc).timestamp()) + 3600,
@@ -144,14 +142,10 @@ async def test_login_success(
     mock_password_hasher.verify.assert_called_once_with(
         "password123", "hashed_password"
     )
-    mock_token_manager.create_token.assert_any_call(
+    mock_token_manager.create_token.assert_called_once_with(
         TokenType.ACCESS, sample_user.id
     )
-    mock_token_manager.create_token.assert_any_call(
-        TokenType.REFRESH, sample_user.id
-    )
     assert response.access_token == f"ACCESS-{sample_user.id}"
-    assert response.refresh_token == f"REFRESH-{sample_user.id}"
 
 
 @pytest.mark.asyncio
@@ -191,69 +185,6 @@ async def test_login_incorrect_password(
     mock_password_hasher.verify.assert_called_once_with(
         "wrongpassword", "hashed_password"
     )
-
-
-# --- Refresh Tests ---
-
-
-@pytest.mark.asyncio
-async def test_refresh_success(
-    user_service: UserService, mock_token_manager: Mock
-):
-    refresh_token = "valid_refresh_token"
-    refresh_request = RefreshRequest(refresh_token=refresh_token)
-    decoded_payload = TokenPayload(
-        type=TokenType.REFRESH,
-        user_id=uuid.uuid4(),
-        iat=int(datetime.now(timezone.utc).timestamp()),
-        exp=int(datetime.now(timezone.utc).timestamp()) + 3600,
-    )
-    mock_token_manager.decode_token.return_value = decoded_payload
-
-    response = await user_service.refresh(refresh_request)
-
-    mock_token_manager.decode_token.assert_called_once_with(refresh_token)
-    mock_token_manager.create_token.assert_called_once_with(
-        TokenType.ACCESS, decoded_payload.user_id
-    )
-    assert response.access_token == f"ACCESS-{decoded_payload.user_id}"
-
-
-@pytest.mark.asyncio
-async def test_refresh_invalid_token(
-    user_service: UserService, mock_token_manager: Mock
-):
-    refresh_token = "invalid_token"
-    refresh_request = RefreshRequest(refresh_token=refresh_token)
-    mock_token_manager.decode_token.return_value = (
-        None  # Simulate invalid token
-    )
-
-    with pytest.raises(InvalidOrExpiredRefreshToken):
-        await user_service.refresh(refresh_request)
-
-    mock_token_manager.decode_token.assert_called_once_with(refresh_token)
-
-
-@pytest.mark.asyncio
-async def test_refresh_wrong_token_type(
-    user_service: UserService, mock_token_manager: Mock
-):
-    refresh_token = "access_token_instead"
-    refresh_request = RefreshRequest(refresh_token=refresh_token)
-    # Simulate decoding an access token instead of a refresh token
-    decoded_payload = TokenPayload(
-        type=TokenType.ACCESS,
-        user_id=uuid.uuid4(),
-        iat=int(datetime.now(timezone.utc).timestamp()),
-        exp=int(datetime.now(timezone.utc).timestamp()) + 3600,
-    )
-    mock_token_manager.decode_token.return_value = decoded_payload
-
-    with pytest.raises(InvalidOrExpiredRefreshToken):
-        await user_service.refresh(refresh_request)
-
-    mock_token_manager.decode_token.assert_called_once_with(refresh_token)
 
 
 # --- Get Profile Tests ---

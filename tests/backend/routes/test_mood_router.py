@@ -1,11 +1,13 @@
 import uuid
 from datetime import date, datetime, timezone
+from typing import Generator
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, Cookie
 from fastapi.testclient import TestClient
 
+from mood_diary.backend.exceptions.user import InvalidOrExpiredAccessToken
 from mood_diary.backend.exceptions.mood import MoodStampAlreadyExists, MoodStampNotExist
 from mood_diary.backend.routes.dependencies import (
     get_mood_service,
@@ -39,7 +41,9 @@ def main_app_mood(test_user_id: uuid.UUID, mock_mood_service: AsyncMock) -> Fast
     app = FastAPI()
     app.include_router(mood_router, prefix="/api/moods", tags=["moods"])
 
-    async def override_get_current_user_id() -> uuid.UUID:
+    async def override_get_current_user_id(access_token: str | None = Cookie(None)) -> uuid.UUID:
+        if not access_token:
+            raise InvalidOrExpiredAccessToken()
         return test_user_id
 
     def override_get_mood_service() -> MoodService:
@@ -52,7 +56,7 @@ def main_app_mood(test_user_id: uuid.UUID, mock_mood_service: AsyncMock) -> Fast
 
 
 @pytest.fixture
-def client_mood(main_app_mood: FastAPI) -> TestClient:
+def client_mood(main_app_mood: FastAPI) -> Generator[TestClient, None, None]:
     with TestClient(main_app_mood) as client:
         yield client
 
@@ -97,6 +101,7 @@ def test_create_moodstamp_success(
                       "value": 5,
                       "note": "Feeling good today!"
                       }
+    client_mood.cookies.set("access_token", "fake-test-token")
     response = client_mood.post("/api/moods/", json=create_payload)
 
     assert response.status_code == status.HTTP_200_OK
@@ -126,6 +131,7 @@ def test_create_moodstamp_already_exists(
         "value": 3,
         "note": "Already here"
     }
+    client_mood.cookies.set("access_token", "fake-test-token")
     with pytest.raises(MoodStampAlreadyExists):
         client_mood.post("/api/moods/", json=create_payload)
     mock_mood_service.create.assert_awaited_once()
@@ -141,6 +147,7 @@ def test_get_moodstamp_success(
     test_date_str = test_date.isoformat()
     mock_mood_service.get.return_value = sample_mood_stamp_schema
 
+    client_mood.cookies.set("access_token", "fake-test-token")
     response = client_mood.get(f"/api/moods/{test_date_str}")
 
     assert response.status_code == status.HTTP_200_OK
@@ -157,6 +164,7 @@ def test_get_moodstamp_not_found(
     test_date_str = test_date.isoformat()
     mock_mood_service.get.side_effect = MoodStampNotExist()
 
+    client_mood.cookies.set("access_token", "fake-test-token")
     with pytest.raises(MoodStampNotExist):
         client_mood.get(f"/api/moods/{test_date_str}")
     mock_mood_service.get.assert_awaited_once_with(user_id=test_user_id, date=test_date)
@@ -170,6 +178,7 @@ def test_get_many_moodstamps_success_no_filters(
 ):
     mock_mood_service.get_many.return_value = [sample_mood_stamp_schema]
 
+    client_mood.cookies.set("access_token", "fake-test-token")
     response = client_mood.get("/api/moods/")
 
     assert response.status_code == status.HTTP_200_OK
@@ -194,6 +203,7 @@ def test_get_many_moodstamps_success_with_filters(
     end_date_str = "2023-12-31"
     value_filter = 5
 
+    client_mood.cookies.set("access_token", "fake-test-token")
     response = client_mood.get(
         f"/api/moods/?start_date={start_date_str}&end_date={end_date_str}&value={value_filter}")
 
@@ -223,6 +233,7 @@ def test_update_moodstamp_success(
     updated_schema = sample_mood_stamp_schema.model_copy(update=update_payload)
     mock_mood_service.update.return_value = updated_schema
 
+    client_mood.cookies.set("access_token", "fake-test-token")
     response = client_mood.put(f"/api/moods/{test_date_str}", json=update_payload)
 
     assert response.status_code == status.HTTP_200_OK
@@ -245,6 +256,7 @@ def test_update_moodstamp_not_found(
     update_payload = {"value": 4, "note": "Trying to update non-existent"}
     mock_mood_service.update.side_effect = MoodStampNotExist
 
+    client_mood.cookies.set("access_token", "fake-test-token")
     with pytest.raises(MoodStampNotExist):
         client_mood.put(f"/api/moods/{test_date_str}", json=update_payload)
     mock_mood_service.update.assert_awaited_once()
@@ -257,6 +269,7 @@ def test_update_moodstamp_validation_error(
     test_date_str = test_date.isoformat()
     invalid_payload = {"value": "not-an-integer", "note": "Invalid data"}
 
+    client_mood.cookies.set("access_token", "fake-test-token")
     response = client_mood.put(f"/api/moods/{test_date_str}", json=invalid_payload)
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
@@ -274,6 +287,7 @@ def test_delete_moodstamp_success(
     test_date_str = test_date.isoformat()
     mock_mood_service.delete.return_value = None
 
+    client_mood.cookies.set("access_token", "fake-test-token")
     response = client_mood.delete(f"/api/moods/{test_date_str}")
 
     assert response.status_code == status.HTTP_200_OK
@@ -289,6 +303,7 @@ def test_delete_moodstamp_not_found(
     test_date_str = test_date.isoformat()
     mock_mood_service.delete.side_effect = MoodStampNotExist
 
+    client_mood.cookies.set("access_token", "fake-test-token")
     with pytest.raises(MoodStampNotExist):
         client_mood.delete(f"/api/moods/{test_date_str}")
     mock_mood_service.delete.assert_awaited_once_with(user_id=test_user_id, date=test_date)
