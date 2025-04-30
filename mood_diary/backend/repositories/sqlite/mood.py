@@ -22,14 +22,15 @@ class SQLiteMoodRepository(MoodStampRepository):
         cursor = self.connection.cursor()
         cursor.execute(
             """
-            CREATE TABLE IF NOT EXISTS moodstamps (
+            CREATE TABLE IF NOT EXISTS moodStamps (
                 id TEXT PRIMARY KEY,
-                user_id TEXT FOREIGN KEY,
+                user_id TEXT NOT NULL,
                 date DATE UNIQUE NOT NULL,
                 value INT NOT NULL,
                 note TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             )
             """
         )
