@@ -178,7 +178,7 @@ async def test_create_moodstamp_success(
 
     mock_connection.cursor.assert_called()
     assert mock_cursor.execute.call_count >= 2
-    assert "INSERT INTO moodStamps" in mock_cursor.execute.call_args[0][0]
+    assert "INSERT INTO moodstamps" in mock_cursor.execute.call_args[0][0]
     mock_connection.commit.assert_called_once()
     assert created_mood.date == create_data.date
 
