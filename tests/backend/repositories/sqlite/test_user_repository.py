@@ -12,10 +12,14 @@ from mood_diary.backend.repositories.sсhemas.user import (
     UpdateUserProfile,
     User,
 )
-from tests.backend.repositories.sqlite.base_fixtures import mock_connection, mock_cursor
+from tests.backend.repositories.sqlite.base_fixtures import (
+    mock_connection,
+    mock_cursor,
+)
 
 
 # --- Fixtures ---
+
 
 @pytest.fixture
 def user_repo(mock_connection):
@@ -57,27 +61,27 @@ def sample_user_schema(sample_user_data):
 
 
 def test_init_db(
-        user_repo: SQLiteUserRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
+    user_repo: SQLiteUserRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
 ):
     user_repo.init_db()
     mock_connection.cursor.assert_called_once()
     mock_cursor.execute.assert_called_once_with(ANY)
     assert (
-            "CREATE TABLE IF NOT EXISTS users"
-            in mock_cursor.execute.call_args[0][0]
+        "CREATE TABLE IF NOT EXISTS users"
+        in mock_cursor.execute.call_args[0][0]
     )
     mock_connection.commit.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_get_user_found(
-        user_repo: SQLiteUserRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_user_data: tuple,
-        sample_user_schema: User,
+    user_repo: SQLiteUserRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_user_data: tuple,
+    sample_user_schema: User,
 ):
     user_id = sample_user_schema.id
     mock_cursor.fetchone.return_value = sample_user_data
@@ -100,9 +104,9 @@ async def test_get_user_found(
 
 @pytest.mark.asyncio
 async def test_get_user_not_found(
-        user_repo: SQLiteUserRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
+    user_repo: SQLiteUserRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
 ):
     user_id = uuid.uuid4()
     mock_cursor.fetchone.return_value = None
@@ -120,11 +124,11 @@ async def test_get_user_not_found(
 
 @pytest.mark.asyncio
 async def test_get_by_username_found(
-        user_repo: SQLiteUserRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_user_data: tuple,
-        sample_user_schema: User,
+    user_repo: SQLiteUserRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_user_data: tuple,
+    sample_user_schema: User,
 ):
     username = sample_user_schema.username
     mock_cursor.fetchone.return_value = sample_user_data
@@ -143,9 +147,9 @@ async def test_get_by_username_found(
 
 @pytest.mark.asyncio
 async def test_get_by_username_not_found(
-        user_repo: SQLiteUserRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
+    user_repo: SQLiteUserRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
 ):
     username = "nonexistent"
     mock_cursor.fetchone.return_value = None
@@ -163,10 +167,10 @@ async def test_get_by_username_not_found(
 
 @pytest.mark.asyncio
 async def test_create_user_success(
-        user_repo: SQLiteUserRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_user_schema: User,
+    user_repo: SQLiteUserRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_user_schema: User,
 ):
     create_data = CreateUser(
         username="newuser",
@@ -176,8 +180,8 @@ async def test_create_user_success(
     user_repo.get_by_username.return_value = sample_user_schema
 
     with patch(
-            "mood_diary.backend.repositories.sqlite.user.uuid4",
-            return_value=sample_user_schema.id,
+        "mood_diary.backend.repositories.sqlite.user.uuid4",
+        return_value=sample_user_schema.id,
     ):
         created_user = await user_repo.create(create_data)
 
@@ -202,9 +206,9 @@ async def test_create_user_success(
 
 @pytest.mark.asyncio
 async def test_create_user_integrity_error(
-        user_repo: SQLiteUserRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
+    user_repo: SQLiteUserRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
 ):
     create_data = CreateUser(
         username="existinguser",
@@ -224,10 +228,10 @@ async def test_create_user_integrity_error(
 
 @pytest.mark.asyncio
 async def test_update_profile_success(
-        user_repo: SQLiteUserRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_user_schema: User,
+    user_repo: SQLiteUserRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_user_schema: User,
 ):
     user_id = sample_user_schema.id
     update_data = UpdateUserProfile(name="Updated Name")
@@ -247,10 +251,10 @@ async def test_update_profile_success(
 
 @pytest.mark.asyncio
 async def test_update_hashed_password_success(
-        user_repo: SQLiteUserRepository,
-        mock_connection: AsyncMock,
-        mock_cursor: MagicMock,
-        sample_user_schema: User,
+    user_repo: SQLiteUserRepository,
+    mock_connection: AsyncMock,
+    mock_cursor: MagicMock,
+    sample_user_schema: User,
 ):
     user_id = sample_user_schema.id
     update_data = UpdateUserHashedPassword(

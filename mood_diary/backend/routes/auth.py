@@ -11,13 +11,12 @@ from mood_diary.common.api.schemas.auth import (
     RegisterRequest,
     Profile,
     LoginRequest,
-    LoginResponse,
-    RefreshResponse,
-    RefreshRequest,
     ChangePasswordRequest,
     ChangeProfileRequest,
 )
 from mood_diary.common.api.schemas.common import MessageResponse
+
+from mood_diary.backend.config import config
 
 router = APIRouter()
 
@@ -50,11 +49,9 @@ async def register(
 
 @router.post(
     "/login",
-    response_model=LoginResponse,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
-            "model": LoginResponse,
             "description": "User logged in successfully",
         },
         status.HTTP_401_UNAUTHORIZED: {
@@ -75,7 +72,16 @@ async def register(
 async def login(
     request: LoginRequest, service: UserService = Depends(get_user_service)
 ):
-    return await service.login(request)
+    login_response = await service.login(request)
+    response = Response(status_code=status.HTTP_200_OK)
+    response.set_cookie(
+        key="access_token",
+        value=login_response.access_token,
+        httponly=True,
+        samesite="lax",
+        secure=config.AUTH_SECURE_COOKIE,
+    )
+    return response
 
 
 @router.post(
@@ -96,32 +102,6 @@ async def login(
 )
 async def validate_token(user_id: UUID = Depends(get_current_user_id)):
     return Response(status_code=status.HTTP_200_OK)
-
-
-@router.post(
-    "/refresh",
-    response_model=RefreshResponse,
-    status_code=status.HTTP_200_OK,
-    responses={
-        status.HTTP_200_OK: {
-            "model": RefreshResponse,
-            "description": "Token refreshed successfully",
-        },
-        status.HTTP_401_UNAUTHORIZED: {
-            "model": MessageResponse,
-            "description": "Invalid or expired refresh token",
-            "content": {
-                "application/json": {
-                    "example": {"message": "Invalid or expired refresh token"}
-                }
-            },
-        },
-    },
-)
-async def refresh_token(
-    request: RefreshRequest, service: UserService = Depends(get_user_service)
-):
-    return await service.refresh(request)
 
 
 @router.get(

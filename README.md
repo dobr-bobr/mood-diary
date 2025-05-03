@@ -72,8 +72,9 @@
 
 ### Tokens
 
-For auth, access and refresh JWT tokens are used.
-Access and refresh tokens lifetimes are specified in .env file.
+For authentication, a single JWT access token is used.
+It is sent from the backend to the client via an HttpOnly cookie upon successful login.
+The access token lifetime is specified in the .env file.
 
 ### Endpoints
 
@@ -87,32 +88,28 @@ Access and refresh tokens lifetimes are specified in .env file.
 2) `POST /auth/login`
     * Request Body: `{"username": "string", "password": "string"}`
     * Response:
-        * Success: 200 with JSON `{"access_token": "string", "refresh_token": "string"}`
+        * Success: 200 - Sets an HttpOnly cookie named `access_token` containing the JWT.
         * Error: 401 with error message - Incorrect password or username does not exist.
 3) `POST /auth/validate`
-    * Request Header: `Authorization: Bearer <access_token>`
+    * Request Header: Requires `access_token` cookie.
     * Response:
         * Success: 200
         * Error: 401 with error message - Invalid or expired token.
-4) `POST /auth/refresh`
-    * Request Body: `{"refresh_token": "string"}`
-    * Response:
-        * Success: 200 with JSON `{"access_token": "string"}`
-        * Error: 401 with error message - Invalid or expired refresh token.
-5) `GET /auth/profile`
-    * Request Header: `Authorization: Bearer <access_token>`
+4) `GET /auth/profile`
+    * Request Header: Requires `access_token` cookie.
     * Response:
         * Success: 200 with JSON
           `{"id": "string", "username": "string", "name": "string", "created_at": datetime, "updated_at": datetime, "password_updated_at": datetime}`
-6) `PUT /auth/password`
-    * Request Header: `Authorization: Bearer <access_token>`
+        * Error: 422 with error message - Incorrect name format.
+5) `PUT /auth/password`
+    * Request Header: Requires `access_token` cookie.
     * Request Body: `{"old_password": "string", "new_password": "string"}`
     * Response:
         * Success: 200
         * Error: 401 with error message - Incorrect old password.
         * Error: 400 with error message - New password is in the wrong format.
-7) `PUT /auth/profile`
-    * Request Header: `Authorization: Bearer <access_token>`
+6) `PUT /auth/profile`
+    * Request Header: Requires `access_token` cookie.
     * Request Body: `{"name": "string"}`
     * Response:
         * Success: 200 with JSON

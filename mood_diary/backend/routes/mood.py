@@ -39,9 +39,9 @@ router = APIRouter()
     },
 )
 async def create(
-        request: CreateMoodStampRequest,
-        user_id: UUID = Depends(get_current_user_id),
-        service: MoodService = Depends(get_mood_service),
+    request: CreateMoodStampRequest,
+    user_id: UUID = Depends(get_current_user_id),
+    service: MoodService = Depends(get_mood_service),
 ):
     return await service.create(user_id=user_id, body=request)
 
@@ -67,9 +67,9 @@ async def create(
     },
 )
 async def get_moodstamp(
-        date: date = Path(...),
-        user_id: UUID = Depends(get_current_user_id),
-        service: MoodService = Depends(get_mood_service),
+    date: date = Path(...),
+    user_id: UUID = Depends(get_current_user_id),
+    service: MoodService = Depends(get_mood_service),
 ):
     return await service.get(user_id=user_id, date=date)
 
@@ -95,11 +95,11 @@ async def get_moodstamp(
     },
 )
 async def get_many_moodstamps(
-        start_date: date | None = None,
-        end_date: date | None = None,
-        value: int | None = None,
-        user_id: UUID = Depends(get_current_user_id),
-        service: MoodService = Depends(get_mood_service),
+    start_date: date | None = None,
+    end_date: date | None = None,
+    value: int | None = None,
+    user_id: UUID = Depends(get_current_user_id),
+    service: MoodService = Depends(get_mood_service),
 ):
     request = GetManyMoodStampsRequest(
         start_date=start_date,
@@ -137,10 +137,10 @@ async def get_many_moodstamps(
     },
 )
 async def update_moodstamp(
-        request: UpdateMoodStampRequest,
-        date: date = Path(...),
-        user_id: UUID = Depends(get_current_user_id),
-        service: MoodService = Depends(get_mood_service),
+    request: UpdateMoodStampRequest,
+    date: date = Path(...),
+    user_id: UUID = Depends(get_current_user_id),
+    service: MoodService = Depends(get_mood_service),
 ):
     return await service.update(user_id=user_id, date=date, body=request)
 
@@ -162,8 +162,8 @@ async def update_moodstamp(
     },
 )
 async def delete_moodstamp(
-        date: date = Path(...),
-        user_id: UUID = Depends(get_current_user_id),
-        service: MoodService = Depends(get_mood_service),
+    date: date = Path(...),
+    user_id: UUID = Depends(get_current_user_id),
+    service: MoodService = Depends(get_mood_service),
 ):
     return await service.delete(user_id=user_id, date=date)

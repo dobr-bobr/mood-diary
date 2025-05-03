@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from fastapi import Depends, Header, status
+from fastapi import Depends, Cookie, status
 from fastapi.testclient import TestClient
 
 from mood_diary.backend.config import Settings
@@ -11,7 +11,6 @@ from mood_diary.backend.exceptions.user import (
     IncorrectOldPassword,
     IncorrectPasswordOrUserDoesNotExists,
     InvalidOrExpiredAccessToken,
-    InvalidOrExpiredRefreshToken,
     UsernameAlreadyExists,
     UserNotFound,
 )
@@ -30,7 +29,6 @@ from mood_diary.backend.utils.token_manager import (
 from mood_diary.common.api.schemas.auth import (
     LoginResponse,
     Profile,
-    RefreshResponse,
 )
 
 
@@ -46,7 +44,6 @@ def test_token_manager() -> TokenManager:
         secret_key="fixed-test-secret-key",
         algorithm="HS256",
         access_token_exp_minutes=5,
-        refresh_token_exp_minutes=10,
     )
 
 
@@ -62,10 +59,10 @@ def override_dependencies(
     test_user_id = uuid.uuid4()
 
     async def mock_get_current_user_id_simple_check(
-        authorization: str | None = Header(None),
+        access_token: str | None = Cookie(None),
         token_manager: TokenManager = Depends(lambda: test_token_manager),
     ) -> uuid.UUID:
-        if not authorization or not authorization.startswith("Bearer "):
+        if not access_token:
             raise InvalidOrExpiredAccessToken()
 
         return test_user_id
@@ -145,13 +142,14 @@ def test_register_validation_error(client: TestClient):
 def test_login_success(client: TestClient, mock_user_service: AsyncMock):
     login_response_data = {
         "access_token": "fake_access_token",
-        "refresh_token": "fake_refresh_token",
     }
     mock_user_service.login.return_value = LoginResponse(**login_response_data)
     login_payload = {"username": "testuser", "password": "password123"}
     response = client.post("/api/auth/login", json=login_payload)
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == login_response_data
+    assert "access_token" in response.cookies
+    access_cookie = response.cookies.get("access_token")
+    assert access_cookie is not None
     mock_user_service.login.assert_awaited_once()
 
 
@@ -168,49 +166,16 @@ def test_login_unauthorized(client: TestClient, mock_user_service: AsyncMock):
 
 
 def test_validate_token_success(client: TestClient, override_dependencies):
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.post("/api/auth/validate", headers=headers)
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.post("/api/auth/validate")
     assert response.status_code == status.HTTP_200_OK
     assert response.content == b""
 
 
-def test_validate_token_no_header(client: TestClient, override_dependencies):
+def test_validate_token_no_cookie(client: TestClient, override_dependencies):
     response = client.post("/api/auth/validate")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid or expired access token"}
-
-
-def test_validate_token_invalid_scheme(
-    client: TestClient, override_dependencies
-):
-    headers = {"Authorization": "Basic invalid"}
-    response = client.post("/api/auth/validate", headers=headers)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or expired access token"}
-
-
-def test_refresh_token_success(
-    client: TestClient, mock_user_service: AsyncMock
-):
-    refresh_response_data = {"access_token": "new_fake_access_token"}
-    mock_user_service.refresh.return_value = RefreshResponse(
-        **refresh_response_data
-    )
-    refresh_payload = {"refresh_token": "valid_refresh_token"}
-    response = client.post("/api/auth/refresh", json=refresh_payload)
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == refresh_response_data
-    mock_user_service.refresh.assert_awaited_once()
-
-
-def test_refresh_token_unauthorized(
-    client: TestClient, mock_user_service: AsyncMock
-):
-    mock_user_service.refresh.side_effect = InvalidOrExpiredRefreshToken()
-    refresh_payload = {"refresh_token": "invalid_or_expired_token"}
-    response = client.post("/api/auth/refresh", json=refresh_payload)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or expired refresh token"}
 
 
 def test_get_profile_success(
@@ -221,8 +186,8 @@ def test_get_profile_success(
 ):
     user_id = override_dependencies
     mock_user_service.get_profile.return_value = Profile(**sample_profile_data)
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.get("/api/auth/profile", headers=headers)
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.get("/api/auth/profile")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == sample_profile_data
     mock_user_service.get_profile.assert_awaited_once_with(user_id)
@@ -243,10 +208,8 @@ def test_change_password_success(
         "old_password": "oldPass123",
         "new_password": "newPass456!",
     }
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.put(
-        "/api/auth/password", json=password_payload, headers=headers
-    )
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/password", json=password_payload)
     assert response.status_code == status.HTTP_200_OK
     assert response.json() is None
     mock_user_service.change_password.assert_awaited_once()
@@ -265,10 +228,8 @@ def test_change_password_incorrect_old(
         "old_password": "wrongOldPass",
         "new_password": "newPass456!",
     }
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.put(
-        "/api/auth/password", json=password_payload, headers=headers
-    )
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/password", json=password_payload)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Incorrect old password"}
 
@@ -280,10 +241,8 @@ def test_change_password_validation_error(
         "old_password": "ValidOld1",
         "new_password": "short",
     }
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.put(
-        "/api/auth/password", json=password_payload, headers=headers
-    )
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/password", json=password_payload)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
@@ -304,10 +263,8 @@ def test_update_profile_success(
     )
 
     profile_payload = {"name": "New Name"}
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.put(
-        "/api/auth/profile", json=profile_payload, headers=headers
-    )
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/profile", json=profile_payload)
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == updated_profile_data
@@ -321,8 +278,6 @@ def test_update_profile_validation_error(
     client: TestClient, override_dependencies
 ):
     profile_payload = {"name": "N"}
-    headers = {"Authorization": "Bearer valid.token.for.test"}
-    response = client.put(
-        "/api/auth/profile", json=profile_payload, headers=headers
-    )
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/profile", json=profile_payload)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

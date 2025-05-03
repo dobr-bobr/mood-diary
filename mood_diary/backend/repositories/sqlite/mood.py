@@ -24,12 +24,13 @@ class SQLiteMoodRepository(MoodStampRepository):
             """
             CREATE TABLE IF NOT EXISTS moodstamps (
                 id TEXT PRIMARY KEY,
-                user_id TEXT FOREIGN KEY,
+                user_id TEXT NOT NULL,
                 date DATE UNIQUE NOT NULL,
                 value INT NOT NULL,
                 note TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             )
             """
         )
@@ -38,7 +39,7 @@ class SQLiteMoodRepository(MoodStampRepository):
     async def get(self, user_id: UUID, date: date) -> MoodStamp | None:
         cursor = self.connection.cursor()
         cursor.execute(
-            "SELECT * FROM moodStamps WHERE date = ? AND user_id = ?",
+            "SELECT * FROM moodstamps WHERE date = ? AND user_id = ?",
             date,
             user_id,
         )
@@ -56,10 +57,10 @@ class SQLiteMoodRepository(MoodStampRepository):
         return None
 
     async def get_many(
-            self, user_id: UUID, body: MoodStampFilter
+        self, user_id: UUID, body: MoodStampFilter
     ) -> list[MoodStamp]:
         cursor = self.connection.cursor()
-        query = "SELECT * FROM moodStamps WHERE user_id = ?"
+        query = "SELECT * FROM moodstamps WHERE user_id = ?"
         params: list[Union[str, date, int]] = [str(user_id)]
 
         if body.start_date is not None:
@@ -88,9 +89,7 @@ class SQLiteMoodRepository(MoodStampRepository):
             for row in rows
         ]
 
-    async def create(
-            self, user_id: UUID, body: CreateMoodStamp
-    ) -> MoodStamp:
+    async def create(self, user_id: UUID, body: CreateMoodStamp) -> MoodStamp:
         """
         Create new moodstamp.
         Returns None if moodstamp with the same entry date already exists
@@ -99,7 +98,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         cursor = self.connection.cursor()
 
         cursor.execute(
-            "SELECT id FROM moodStamps WHERE user_id = ? AND date = ?",
+            "SELECT id FROM moodstamps WHERE user_id = ? AND date = ?",
             (str(user_id), body.date),
         )
         if cursor.fetchone():
@@ -109,7 +108,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         created_at = updated_at = datetime.now()
 
         cursor.execute(
-            """INSERT INTO moodStamps
+            """INSERT INTO moodstamps
             (id, user_id, date, value, note, created_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
@@ -135,14 +134,14 @@ class SQLiteMoodRepository(MoodStampRepository):
         )
 
     async def update(
-            self, user_id: UUID, date: date, body: UpdateMoodStamp
+        self, user_id: UUID, date: date, body: UpdateMoodStamp
     ) -> MoodStamp | None:
         """Update moodstamp by date. Returns None if moodstamp not found"""
         cursor = self.connection.cursor()
 
         # First get the existing stamp
         cursor.execute(
-            "SELECT * FROM moodStamps WHERE user_id = ? AND date = ?",
+            "SELECT * FROM moodstamps WHERE user_id = ? AND date = ?",
             (str(user_id), date),
         )
         row = cursor.fetchone()
@@ -158,7 +157,7 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         # Perform the update
         cursor.execute(
-            """UPDATE moodStamps
+            """UPDATE moodstamps
             SET value = ?, note = ?, updated_at = ?
             WHERE user_id = ? AND date = ?""",
             (
@@ -181,15 +180,13 @@ class SQLiteMoodRepository(MoodStampRepository):
             updated_at=updated_at,
         )
 
-    async def delete(
-            self, user_id: UUID, date: date
-    ) -> MoodStamp | None:
+    async def delete(self, user_id: UUID, date: date) -> MoodStamp | None:
         """Delete moodstamp by date. Returns None if stamp not found"""
         cursor = self.connection.cursor()
 
         # First get the stamp to return it
         cursor.execute(
-            "SELECT * FROM moodStamps WHERE user_id = ? AND date = ?",
+            "SELECT * FROM moodstamps WHERE user_id = ? AND date = ?",
             (str(user_id), date),
         )
         row = cursor.fetchone()
@@ -198,7 +195,7 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         # Delete the stamp
         cursor.execute(
-            "DELETE FROM moodStamps WHERE user_id = ? AND date = ?",
+            "DELETE FROM moodstamps WHERE user_id = ? AND date = ?",
             (str(user_id), date),
         )
         self.connection.commit()
