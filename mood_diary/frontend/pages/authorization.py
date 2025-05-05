@@ -1,5 +1,6 @@
 import streamlit as st
-import requests
+
+from shared.helper.requests_session import provide_requests_session
 
 st.set_page_config(
     page_title="Authorization",
@@ -15,7 +16,8 @@ def login():
     }
 
     try:
-        response = requests.post(
+        session = provide_requests_session()
+        response = session.post(
             "https://mood-diary.duckdns.org/api/auth/login", json=payload
         )
         print(response.status_code)

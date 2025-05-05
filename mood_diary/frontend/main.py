@@ -1,28 +1,43 @@
-import streamlit as st
-import altair as alt
-import pandas as pd
 import datetime
 import random
+from shared.helper.requests_session import provide_requests_session
+import altair as alt
+import pandas as pd
 import requests
+import streamlit as st
 
-st.markdown(
-    """
+BASE_URL = "https://mood-diary.duckdns.org/api"
+
+# fetch profile
+try:
+    session = provide_requests_session()
+    response = session.get(f"{BASE_URL}/auth/profile")
+    if response.status_code == 200:
+        profile_data = response.json()
+        st.session_state.username = profile_data.get('username', 'User')
+    else:
+        print(response.status_code)
+        st.error("Failed to load user profile")
+        st.stop()
+except Exception as e:
+    st.error(f"Error fetching profile: {e}")
+    st.stop()
+
+st.markdown(f"""
 <style>
-.mood-banner {
+.mood-banner {{
     background: linear-gradient(90deg, #1e3b29, #2c4a3a);
     color: white;
     padding: 20px;
     border-radius: 10px;
     margin-bottom: 20px;
-}
+}}
 </style>
 <div class="mood-banner">
-    <h2>How do you feel, #REPLACE WITH USER NAME#</h2>
+    <h2>How do you feel, {st.session_state.username}</h2>
     <p>Please, mark your mood today</p>
 </div>
-""",
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
 
 
 @st.cache_data
@@ -332,16 +347,16 @@ with st.form(key="comment_form", clear_on_submit=True, enter_to_submit=False):
         rating = 10
 
     form_submitted = (
-        one
-        or two
-        or three
-        or four
-        or five
-        or six
-        or seven
-        or eight
-        or nine
-        or ten
+            one
+            or two
+            or three
+            or four
+            or five
+            or six
+            or seven
+            or eight
+            or nine
+            or ten
     )
 
     if form_submitted:

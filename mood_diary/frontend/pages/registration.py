@@ -1,7 +1,9 @@
-import streamlit as st
-import requests
-from shared.helper.check_passwords import compare_passwords
 import time
+
+import streamlit as st
+from shared.helper.check_passwords import compare_passwords
+
+from shared.helper.requests_session import provide_requests_session
 
 st.set_page_config(
     page_title="Registration",
@@ -18,7 +20,8 @@ def register():
     }
 
     try:
-        response = requests.post(
+        session = provide_requests_session()
+        response = session.post(
             "https://mood-diary.duckdns.org/api/auth/register", json=payload
         )
         data = response.json()
