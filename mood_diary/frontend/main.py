@@ -14,7 +14,7 @@ try:
     response = session.get(f"{BASE_URL}/auth/profile")
     if response.status_code == 200:
         profile_data = response.json()
-        st.session_state.username = profile_data.get('username', 'User')
+        st.session_state.username = profile_data.get("username", "User")
     else:
         print(response.status_code)
         st.error("Failed to load user profile")
@@ -23,7 +23,8 @@ except Exception as e:
     st.error(f"Error fetching profile: {e}")
     st.stop()
 
-st.markdown(f"""
+st.markdown(
+    f"""
 <style>
 .mood-banner {{
     background: linear-gradient(90deg, #1e3b29, #2c4a3a);
@@ -37,7 +38,9 @@ st.markdown(f"""
     <h2>How do you feel, {st.session_state.username}</h2>
     <p>Please, mark your mood today</p>
 </div>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 @st.cache_data
@@ -347,16 +350,16 @@ with st.form(key="comment_form", clear_on_submit=True, enter_to_submit=False):
         rating = 10
 
     form_submitted = (
-            one
-            or two
-            or three
-            or four
-            or five
-            or six
-            or seven
-            or eight
-            or nine
-            or ten
+        one
+        or two
+        or three
+        or four
+        or five
+        or six
+        or seven
+        or eight
+        or nine
+        or ten
     )
 
     if form_submitted:
