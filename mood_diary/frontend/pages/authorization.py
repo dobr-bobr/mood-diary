@@ -1,40 +1,54 @@
 import streamlit as st
 import requests
 
-st.set_page_config(page_title="Authorization", layout="centered", initial_sidebar_state="collapsed")
+st.set_page_config(
+    page_title="Authorization",
+    layout="centered",
+    initial_sidebar_state="collapsed",
+)
+
 
 def login():
     payload = {
         "username": st.session_state.username,
-        "password": st.session_state.password
+        "password": st.session_state.password,
     }
 
     try:
-        response = requests.post("https://mood-diary.duckdns.org/api/auth/login", json=payload)
+        response = requests.post(
+            "https://mood-diary.duckdns.org/api/auth/login", json=payload
+        )
         print(response.status_code)
         if response.status_code == 200:
-            st.switch_page('main.py')
-            
+            st.switch_page("main.py")
+
         data = response.json()
 
         if response.status_code == 401:
-            raise Exception(data['detail'])
+            raise Exception(data["detail"])
         elif response.status_code == 422:
-            raise Exception(f"{data['detail'][0]['loc'][1].capitalize()}: {data['detail'][0]['msg'].lower()}")
+            raise Exception(
+                f"{data['detail'][0]['loc'][1].capitalize()}: {data['detail'][0]['msg'].lower()}"
+            )
         return data
     except Exception as e:
         st.error(f"{e}")
         return None
 
-with st.form("my_form", enter_to_submit=False):
-    username = st.text_input('Username', key="username")
-    password = st.text_input('Password', key="password", type="password")
 
-    is_submitted = st.form_submit_button('Sign in')
-    auth_link = st.form_submit_button("Don't have an account?", help="Redirect to Sign In page", type="secondary")
+with st.form("my_form", enter_to_submit=False):
+    username = st.text_input("Username", key="username")
+    password = st.text_input("Password", key="password", type="password")
+
+    is_submitted = st.form_submit_button("Sign in")
+    auth_link = st.form_submit_button(
+        "Don't have an account?",
+        help="Redirect to Sign In page",
+        type="secondary",
+    )
 
     if auth_link:
-        st.switch_page('pages/registration.py')
+        st.switch_page("pages/registration.py")
 
     if is_submitted:
         if username and password:
