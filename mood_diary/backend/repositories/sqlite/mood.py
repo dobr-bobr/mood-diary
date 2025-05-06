@@ -25,7 +25,7 @@ class SQLiteMoodRepository(MoodStampRepository):
             CREATE TABLE IF NOT EXISTS moodstamps (
                 id TEXT PRIMARY KEY,
                 user_id TEXT NOT NULL,
-                date DATE UNIQUE NOT NULL,
+                date DATE NOT NULL,
                 value INT NOT NULL,
                 note TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
