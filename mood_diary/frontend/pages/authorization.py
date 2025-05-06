@@ -1,5 +1,4 @@
 import streamlit as st
-
 from shared.helper.requests_session import provide_requests_session
 
 st.set_page_config(
@@ -9,6 +8,16 @@ st.set_page_config(
 )
 
 
+def clear_user_data():
+    preserved_keys = ['username', 'password', 'access_token']
+
+    all_keys = list(st.session_state.keys())
+
+    for key in all_keys:
+        if key not in preserved_keys:
+            del st.session_state[key]
+
+
 def login():
     payload = {
         "username": st.session_state.username,
@@ -16,11 +25,12 @@ def login():
     }
 
     try:
+        clear_user_data()
         session = provide_requests_session()
         response = session.post(
             "https://mood-diary.duckdns.org/api/auth/login", json=payload
         )
-        print(response.status_code)
+
         if response.status_code == 200:
             st.switch_page("main.py")
 

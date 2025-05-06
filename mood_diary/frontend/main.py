@@ -104,7 +104,6 @@ def fetch_create_mood(value, note):
         return False
 
 
-@st.cache_data(ttl=60)
 def get_user_ratings_data():
     end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=30)
@@ -160,7 +159,7 @@ if not st.session_state.user_ratings_df.empty:
         color=alt.value("#888888")
     )
 
-    points = alt.Chart(user_ratings).mark_circle(size=100).encode(
+    points = alt.Chart(user_ratings).mark_circle(size=150).encode(
         x='date:T',
         y='rating:Q',
         color=alt.Color('rating:Q', scale=alt.Scale(
