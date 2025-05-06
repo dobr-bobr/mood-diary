@@ -1,28 +1,29 @@
 import datetime
-import random
 from shared.helper.requests_session import provide_requests_session
 import altair as alt
 import pandas as pd
-import requests
 import streamlit as st
 
 BASE_URL = "https://mood-diary.duckdns.org/api"
+session = provide_requests_session()
 
-# fetch profile
-try:
-    session = provide_requests_session()
-    response = session.get(f"{BASE_URL}/auth/profile")
-    if response.status_code == 200:
-        profile_data = response.json()
-        st.session_state.username = profile_data.get("username", "User")
-    else:
-        print(response.status_code)
-        st.error("Failed to load user profile")
+def fetch_profile():
+    try:
+        response = session.get(f"{BASE_URL}/auth/profile")
+        if response.status_code == 200:
+            profile_data = response.json()
+            st.session_state.username = profile_data.get("username", "User")
+        elif response.status_code == 401:
+            st.switch_page("pages/authorization.py")
+        else:
+            st.error("Failed to load user profile")
+            st.stop()
+    except Exception as e:
+        st.error(f"Error fetching profile: {e}")
         st.stop()
-except Exception as e:
-    st.error(f"Error fetching profile: {e}")
-    st.stop()
 
+
+fetch_profile()
 st.markdown(
     f"""
 <style>
@@ -33,9 +34,18 @@ st.markdown(
     border-radius: 10px;
     margin-bottom: 20px;
 }}
+.rating-btn {{
+    width: 100% !important;
+    height: 40px !important;
+    margin: 2px 0 !important;
+}}
+.rating-selected {{
+    border: 3px solid white !important;
+    box-shadow: 0 0 10px white !important;
+}}
 </style>
 <div class="mood-banner">
-    <h2>How do you feel, {st.session_state.username}</h2>
+    <h2>How do you feel today, {st.session_state.username}?</h2>
     <p>Please, mark your mood today</p>
 </div>
 """,
@@ -43,118 +53,145 @@ st.markdown(
 )
 
 
-@st.cache_data
+def fetch_all_mood(start_date, end_date, value=None):
+    try:
+        params = {
+            'start_date': start_date,
+            'end_date': end_date
+        }
+        if value is not None:
+            params['value'] = value
+
+        response = session.get(f"{BASE_URL}/mood", params=params)
+
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 401:
+            st.switch_page("pages/authorization.py")
+        else:
+            st.error(f"Failed to load user mood: {response.status_code}")
+            st.stop()
+    except Exception as e:
+        st.error(f"Error fetching mood: {e}")
+        st.stop()
+
+
+def fetch_create_mood(value, note):
+    try:
+        payload = {
+            "date": datetime.date.today().isoformat(),
+            "value": value,
+            "note": note,
+        }
+
+        response = session.post(f"{BASE_URL}/mood", json=payload)
+
+        if response.status_code == 200:
+            st.success("Mood entry created successfully!")
+            get_user_ratings_data.clear()
+            return True
+        elif response.status_code == 400:
+            error_msg = response.json().get("detail", "Mood for this date already exists")
+            st.warning(f"{error_msg}")
+            return False
+        elif response.status_code == 401:
+            st.switch_page("pages/authorization.py")
+        else:
+            st.error(f"Failed to create mood: {response.status_code} - {response.text}")
+            return False
+    except Exception as e:
+        st.error(f"Error creating mood: {e}")
+        return False
+
+
+@st.cache_data(ttl=60)
 def get_user_ratings_data():
-    end_date = datetime.datetime.now()
+    end_date = datetime.date.today()
     start_date = end_date - datetime.timedelta(days=30)
-    dates = pd.date_range(start=start_date, end=end_date, freq="D")
+
+    mood_data = fetch_all_mood(start_date.isoformat(), end_date.isoformat())
+    if not mood_data:
+        return pd.DataFrame(columns=["date", "rating", "comment"])
 
     ratings = []
+    for entry in mood_data:
+        try:
+            date_str = entry.get("date")
+            value = entry.get("value")
+            note = entry.get("note", "")
 
-    for i in range(len(dates)):
-        if random.random() > 0.8:
+            if 'T' in date_str:
+                date_obj = datetime.datetime.fromisoformat(date_str)
+            else:
+                date_obj = datetime.datetime.combine(
+                    datetime.date.fromisoformat(date_str),
+                    datetime.time()
+                )
+
+            ratings.append({
+                "date": date_obj,
+                "rating": value,
+                "comment": note
+            })
+        except Exception as e:
+            print(f"Error processing entry: {entry}, error: {e}")
             continue
 
-        rating = random.randint(1, 10)
-        ratings.append(
-            {
-                "date": dates[i],
-                "rating": rating,
-                "comment": f"User comment for rating {rating}",
-            }
-        )
-
-    df = pd.DataFrame(ratings)
-    return df
+    return pd.DataFrame(ratings)
 
 
 if "user_ratings_df" not in st.session_state:
     st.session_state.user_ratings_df = get_user_ratings_data()
 
-if not st.session_state.user_ratings_df.empty:
-    user_ratings = st.session_state.user_ratings_df
-
-    hover = alt.selection_point(
-        fields=["date"],
-        nearest=True,
-        on="mouseover",
-        empty="none",
-    )
-
-    color_scale = alt.Scale(
-        domain=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-        range=[
-            "#ef4056",
-            "#f47d2f",
-            "#f8c13a",
-            "#c0d23e",
-            "#8dc63f",
-            "#53a78c",
-            "#3e83c3",
-            "#5465b3",
-            "#6247aa",
-            "#4a357f",
-        ],
-    )
-
-    base = alt.Chart(user_ratings).encode(
-        x=alt.X("date:T", title="Date"),
-        y=alt.Y(
-            "rating:Q", title="Mood Rating", scale=alt.Scale(domain=[0, 11])
-        ),
-        color=alt.Color("rating:Q", scale=color_scale, legend=None),
-    )
-
-    line = base.mark_line(interpolate="monotone", strokeWidth=3).encode(
-        color=alt.value("#888888")  # Use a neutral color for the line
-    )
-
-    points = base.mark_circle(size=100).encode(opacity=alt.value(1))
-
-    tooltipped_points = points.encode(
-        tooltip=[
-            alt.Tooltip("date:T", title="Date", format="%Y-%m-%d"),
-            alt.Tooltip("rating:Q", title="Rating"),
-            alt.Tooltip("comment:N", title="Comment"),
-        ]
-    )
-
-    highlight_points = base.mark_circle(size=120).encode(
-        opacity=alt.condition(hover, alt.value(1), alt.value(0))
-    )
-
-    rule = (
-        alt.Chart(user_ratings)
-        .mark_rule(color="gray")
-        .encode(
-            x="date:T",
-        )
-        .transform_filter(hover)
-    )
-
-    chart = (line + tooltipped_points + highlight_points + rule).add_params(
-        hover
-    )
-
-    st.altair_chart(chart, use_container_width=True)
-else:
-    st.info(
-        "No mood ratings data available yet. Start tracking your mood below!"
-    )
-
-if "comments" not in st.session_state:
-    st.session_state.comments = []
-
+if "form_comment" not in st.session_state:
+    st.session_state.form_comment = ""
 if "selected_rating" not in st.session_state:
     st.session_state.selected_rating = None
 
-with st.form(key="comment_form", clear_on_submit=True, enter_to_submit=False):
-    comment = st.text_area(
-        "",
-        placeholder="Type your thoughts here...",
-        label_visibility="collapsed",
-        height=100,
+if not st.session_state.user_ratings_df.empty:
+    user_ratings = st.session_state.user_ratings_df
+
+    line = alt.Chart(user_ratings).mark_line(
+        interpolate="monotone",
+        strokeWidth=3
+    ).encode(
+        x=alt.X('date:T', title='Date'),
+        y=alt.Y('rating:Q', title='Mood Rating', scale=alt.Scale(domain=[0, 11])),
+        color=alt.value("#888888")
     )
+
+    points = alt.Chart(user_ratings).mark_circle(size=100).encode(
+        x='date:T',
+        y='rating:Q',
+        color=alt.Color('rating:Q', scale=alt.Scale(
+            domain=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+            range=[
+                "#ef4056", "#f47d2f", "#f8c13a", "#c0d23e", "#8dc63f",
+                "#53a78c", "#3e83c3", "#5465b3", "#6247aa", "#4a357f"
+            ]
+        ), legend=None),
+        tooltip=[
+            alt.Tooltip('date:T', title='Date', format='%Y-%m-%d'),
+            alt.Tooltip('rating:Q', title='Rating'),
+            alt.Tooltip('comment:N', title='Comment')
+        ]
+    )
+
+    chart = (line + points).properties(height=300)
+    st.altair_chart(chart, use_container_width=True)
+else:
+    st.info("No mood ratings data available yet. Start tracking your mood below!")
+
+with st.form(key="comment_form", clear_on_submit=False):
+    comment = st.text_area(
+        "Your thoughts",
+        value=st.session_state.form_comment,
+        placeholder="Type your thoughts here...",
+        height=100,
+        key="comment_area"
+    )
+
+    st.session_state.form_comment = comment
 
     if st.session_state.get("rating_required", False):
         st.markdown(
@@ -162,232 +199,51 @@ with st.form(key="comment_form", clear_on_submit=True, enter_to_submit=False):
             unsafe_allow_html=True,
         )
 
-    col1, col2, col3, col4, col5, col6, col7, col8, col9, col10 = st.columns(
-        10
-    )
+    rating_cols = st.columns(10)
+    for i, col in enumerate(rating_cols):
+        rating_value = i + 1
+        color = [
+            "#ef4056", "#f47d2f", "#f8c13a", "#c0d23e", "#8dc63f",
+            "#53a78c", "#3e83c3", "#5465b3", "#6247aa", "#4a357f"
+        ][i]
 
-    with col10:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("10")) {
-            background-color: #4a357f;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        ten = st.form_submit_button(
-            "10", help="Rating 10", use_container_width=True
-        )
-    with col9:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("9")) {
-            background-color: #6247aa;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        nine = st.form_submit_button(
-            "9", help="Rating 9", use_container_width=True
-        )
-    with col8:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("8")) {
-            background-color: #5465b3;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        eight = st.form_submit_button(
-            "8", help="Rating 8", use_container_width=True
-        )
-    with col7:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("7")) {
-            background-color: #3e83c3;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        seven = st.form_submit_button(
-            "7", help="Rating 7", use_container_width=True
-        )
-    with col6:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("6")) {
-            background-color: #53a78c;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        six = st.form_submit_button(
-            "6", help="Rating 6", use_container_width=True
-        )
-    with col5:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("5")) {
-            background-color: #8dc63f;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        five = st.form_submit_button(
-            "5", help="Rating 5", use_container_width=True
-        )
-    with col4:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("4")) {
-            background-color: #c0d23e;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        four = st.form_submit_button(
-            "4", help="Rating 4", use_container_width=True
-        )
-    with col3:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("3")) {
-            background-color: #f8c13a;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        three = st.form_submit_button(
-            "3", help="Rating 3", use_container_width=True
-        )
-    with col2:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("2")) {
-            background-color: #f47d2f;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        two = st.form_submit_button(
-            "2", help="Rating 2", use_container_width=True
-        )
-    with col1:
-        st.markdown(
-            """
-        <style>
-        [data-testid="stButton"] button:has(div:contains("1")) {
-            background-color: #ef4056;
-            color: white;
-            border-radius: 20px;
-        }
-        </style>
-        """,
-            unsafe_allow_html=True,
-        )
-        one = st.form_submit_button(
-            "1", help="Rating 1", use_container_width=True
-        )
-
-    rating = None
-    if one:
-        rating = 1
-    elif two:
-        rating = 2
-    elif three:
-        rating = 3
-    elif four:
-        rating = 4
-    elif five:
-        rating = 5
-    elif six:
-        rating = 6
-    elif seven:
-        rating = 7
-    elif eight:
-        rating = 8
-    elif nine:
-        rating = 9
-    elif ten:
-        rating = 10
-
-    form_submitted = (
-        one
-        or two
-        or three
-        or four
-        or five
-        or six
-        or seven
-        or eight
-        or nine
-        or ten
-    )
-
-    if form_submitted:
-        if comment and rating is not None:
-            st.session_state.comments.append(
-                {"text": comment, "rating": rating}
+        with col:
+            selected = st.session_state.selected_rating == rating_value
+            st.markdown(
+                f"""
+                <style>
+                div[data-testid="column"]:nth-of-type({i + 1}) button {{
+                    background-color: {color} !important;
+                    color: white !important;
+                    border-radius: 20px !important;
+                    width: 100% !important;
+                    height: 40px !important;
+                    margin: 2px 0 !important;
+                    {'border: 3px solid white !important; box-shadow: 0 0 10px white !important;' if selected else ''}
+                }}
+                </style>
+                """,
+                unsafe_allow_html=True,
             )
 
-            new_rating = pd.DataFrame(
-                [
-                    {
-                        "date": datetime.datetime.now(),
-                        "rating": rating,
-                        "comment": comment,
-                    }
-                ]
-            )
+            if st.form_submit_button(
+                    str(rating_value),
+                    help=f"Rating {rating_value}",
+            ):
+                st.session_state.selected_rating = rating_value
+                st.session_state.rating_required = False
 
-            st.session_state.user_ratings_df = pd.concat(
-                [st.session_state.user_ratings_df, new_rating],
-                ignore_index=True,
-            )
-
-            st.success(f"Comment added with rating: {rating}")
-            st.session_state.rating_required = False
-            st.rerun()
-        elif comment:
+    submitted = st.form_submit_button("Submit")
+    if submitted:
+        if st.session_state.selected_rating is None:
             st.session_state.rating_required = True
-        elif rating is not None:
+            st.warning("Please select a rating")
+        elif not comment.strip():
             st.warning("Please enter a comment")
-st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            success = fetch_create_mood(st.session_state.selected_rating, comment)
+            if success:
+                st.session_state.form_comment = ""
+                st.session_state.selected_rating = None
+                st.session_state.user_ratings_df = get_user_ratings_data()
+                st.rerun()
