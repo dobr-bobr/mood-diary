@@ -12,7 +12,7 @@ def fetch_profile():
         response = session.get(f"{BASE_URL}/auth/profile")
         if response.status_code == 200:
             profile_data = response.json()
-            st.session_state.username = profile_data.get("username", "User")
+            st.session_state.name = profile_data.get("name", "User")
         elif response.status_code == 401:
             st.switch_page("pages/authorization.py")
         else:
@@ -45,7 +45,7 @@ st.markdown(
 }}
 </style>
 <div class="mood-banner">
-    <h2>How do you feel today, {st.session_state.username}?</h2>
+    <h2>How do you feel today, {st.session_state.name}?</h2>
     <p>Please, mark your mood today</p>
 </div>
 """,
@@ -181,7 +181,7 @@ if not st.session_state.user_ratings_df.empty:
 else:
     st.info("No mood ratings data available yet. Start tracking your mood below!")
 
-with st.form(key="comment_form", clear_on_submit=False):
+with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
     comment = st.text_area(
         "Your thoughts",
         value=st.session_state.form_comment,
