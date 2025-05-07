@@ -7,6 +7,7 @@ import streamlit as st
 BASE_URL = "https://mood-diary.duckdns.org/api"
 session = provide_requests_session()
 
+
 def fetch_profile():
     try:
         response = session.get(f"{BASE_URL}/auth/profile")
@@ -55,12 +56,9 @@ st.markdown(
 
 def fetch_all_mood(start_date, end_date, value=None):
     try:
-        params = {
-            'start_date': start_date,
-            'end_date': end_date
-        }
+        params = {"start_date": start_date, "end_date": end_date}
         if value is not None:
-            params['value'] = value
+            params["value"] = value
 
         response = session.get(f"{BASE_URL}/mood", params=params)
 
@@ -91,13 +89,17 @@ def fetch_create_mood(value, note):
             get_user_ratings_data.clear()
             return True
         elif response.status_code == 400:
-            error_msg = response.json().get("detail", "Mood for this date already exists")
+            error_msg = response.json().get(
+                "detail", "Mood for this date already exists"
+            )
             st.warning(f"{error_msg}")
             return False
         elif response.status_code == 401:
             st.switch_page("pages/authorization.py")
         else:
-            st.error(f"Failed to create mood: {response.status_code} - {response.text}")
+            st.error(
+                f"Failed to create mood: {response.status_code} - {response.text}"
+            )
             return False
     except Exception as e:
         st.error(f"Error creating mood: {e}")
@@ -119,19 +121,16 @@ def get_user_ratings_data():
             value = entry.get("value")
             note = entry.get("note", "")
 
-            if 'T' in date_str:
+            if "T" in date_str:
                 date_obj = datetime.datetime.fromisoformat(date_str)
             else:
                 date_obj = datetime.datetime.combine(
-                    datetime.date.fromisoformat(date_str),
-                    datetime.time()
+                    datetime.date.fromisoformat(date_str), datetime.time()
                 )
 
-            ratings.append({
-                "date": date_obj,
-                "rating": value,
-                "comment": note
-            })
+            ratings.append(
+                {"date": date_obj, "rating": value, "comment": note}
+            )
         except Exception as e:
             print(f"Error processing entry: {entry}, error: {e}")
             continue
@@ -150,36 +149,59 @@ if "selected_rating" not in st.session_state:
 if not st.session_state.user_ratings_df.empty:
     user_ratings = st.session_state.user_ratings_df
 
-    line = alt.Chart(user_ratings).mark_line(
-        interpolate="monotone",
-        strokeWidth=3
-    ).encode(
-        x=alt.X('date:T', title='Date'),
-        y=alt.Y('rating:Q', title='Mood Rating', scale=alt.Scale(domain=[0, 11])),
-        color=alt.value("#888888")
+    line = (
+        alt.Chart(user_ratings)
+        .mark_line(interpolate="monotone", strokeWidth=3)
+        .encode(
+            x=alt.X("date:T", title="Date"),
+            y=alt.Y(
+                "rating:Q",
+                title="Mood Rating",
+                scale=alt.Scale(domain=[0, 11]),
+            ),
+            color=alt.value("#888888"),
+        )
     )
 
-    points = alt.Chart(user_ratings).mark_circle(size=150).encode(
-        x='date:T',
-        y='rating:Q',
-        color=alt.Color('rating:Q', scale=alt.Scale(
-            domain=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
-            range=[
-                "#ef4056", "#f47d2f", "#f8c13a", "#c0d23e", "#8dc63f",
-                "#53a78c", "#3e83c3", "#5465b3", "#6247aa", "#4a357f"
-            ]
-        ), legend=None),
-        tooltip=[
-            alt.Tooltip('date:T', title='Date', format='%Y-%m-%d'),
-            alt.Tooltip('rating:Q', title='Rating'),
-            alt.Tooltip('comment:N', title='Comment')
-        ]
+    points = (
+        alt.Chart(user_ratings)
+        .mark_circle(size=150)
+        .encode(
+            x="date:T",
+            y="rating:Q",
+            color=alt.Color(
+                "rating:Q",
+                scale=alt.Scale(
+                    domain=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                    range=[
+                        "#ef4056",
+                        "#f47d2f",
+                        "#f8c13a",
+                        "#c0d23e",
+                        "#8dc63f",
+                        "#53a78c",
+                        "#3e83c3",
+                        "#5465b3",
+                        "#6247aa",
+                        "#4a357f",
+                    ],
+                ),
+                legend=None,
+            ),
+            tooltip=[
+                alt.Tooltip("date:T", title="Date", format="%Y-%m-%d"),
+                alt.Tooltip("rating:Q", title="Rating"),
+                alt.Tooltip("comment:N", title="Comment"),
+            ],
+        )
     )
 
     chart = (line + points).properties(height=300)
     st.altair_chart(chart, use_container_width=True)
 else:
-    st.info("No mood ratings data available yet. Start tracking your mood below!")
+    st.info(
+        "No mood ratings data available yet. Start tracking your mood below!"
+    )
 
 with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
     comment = st.text_area(
@@ -187,7 +209,7 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
         value=st.session_state.form_comment,
         placeholder="Type your thoughts here...",
         height=100,
-        key="comment_area"
+        key="comment_area",
     )
 
     st.session_state.form_comment = comment
@@ -202,8 +224,16 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
     for i, col in enumerate(rating_cols):
         rating_value = i + 1
         color = [
-            "#ef4056", "#f47d2f", "#f8c13a", "#c0d23e", "#8dc63f",
-            "#53a78c", "#3e83c3", "#5465b3", "#6247aa", "#4a357f"
+            "#ef4056",
+            "#f47d2f",
+            "#f8c13a",
+            "#c0d23e",
+            "#8dc63f",
+            "#53a78c",
+            "#3e83c3",
+            "#5465b3",
+            "#6247aa",
+            "#4a357f",
         ][i]
 
         with col:
@@ -226,8 +256,8 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
             )
 
             if st.form_submit_button(
-                    str(rating_value),
-                    help=f"Rating {rating_value}",
+                str(rating_value),
+                help=f"Rating {rating_value}",
             ):
                 st.session_state.selected_rating = rating_value
                 st.session_state.rating_required = False
@@ -240,7 +270,9 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
         elif not comment.strip():
             st.warning("Please enter a comment")
         else:
-            success = fetch_create_mood(st.session_state.selected_rating, comment)
+            success = fetch_create_mood(
+                st.session_state.selected_rating, comment
+            )
             if success:
                 st.session_state.form_comment = ""
                 st.session_state.selected_rating = None

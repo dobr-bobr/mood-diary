@@ -405,21 +405,6 @@ files = [
 toml = ["tomli ; python_full_version <= \"3.11.0a6\""]
 
 [[package]]
-name = "extra-streamlit-components-better-cookie-manager"
-version = "0.0.10"
-description = "An all-in-one place, to find complex or just natively unavailable components on streamlit."
-optional = false
-python-versions = ">=3.6"
-groups = ["main"]
-files = [
-    {file = "extra_streamlit_components_better_cookie_manager-0.0.10-py3-none-any.whl", hash = "sha256:ca2966f2a51e16aa41b75d7bc525b0ecde8a139daa85b4e54df955eb7ffafba6"},
-    {file = "extra_streamlit_components_better_cookie_manager-0.0.10.tar.gz", hash = "sha256:fe826299f337b2deba36ae28f03b2a975dacbc87dc2399002f0e52c420b0646a"},
-]
-
-[package.dependencies]
-streamlit = ">=0.86"
-
-[[package]]
 name = "fastapi"
 version = "0.115.12"
 description = "FastAPI framework, high performance, easy to learn, fast to code, ready for production"
@@ -2049,21 +2034,6 @@ watchdog = {version = ">=2.1.5,<7", markers = "platform_system != \"Darwin\""}
 snowflake = ["snowflake-connector-python (>=3.3.0) ; python_version < \"3.12\"", "snowflake-snowpark-python[modin] (>=1.17.0) ; python_version < \"3.12\""]
 
 [[package]]
-name = "streamlit-calendar"
-version = "1.3.0"
-description = "📆 A Streamlit component to show callendar using FullCalendar (https://fullcalendar.io)"
-optional = false
-python-versions = "<4.0,>=3.10"
-groups = ["main"]
-files = [
-    {file = "streamlit_calendar-1.3.0-py3-none-any.whl", hash = "sha256:fdfc9751773955d70e6fd05f942e4e5cf65b603d5eba5ad983e2f021aa6422f5"},
-    {file = "streamlit_calendar-1.3.0.tar.gz", hash = "sha256:e5fe544a8fbd2ead4dc6b4b939dae8af61812d0c3a862be3163ffc464efbaa24"},
-]
-
-[package.dependencies]
-streamlit = ">=1.42.0,<2.0.0"
-
-[[package]]
 name = "tenacity"
 version = "9.1.2"
 description = "Retry code until it succeeds"
@@ -2234,5 +2204,5 @@ watchmedo = ["PyYAML (>=3.10)"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.11"
-content-hash = "1fb2f0985f2b4fda9b954fafab892d58edc6a274ef9b19a11b0dfae8d64cc67c"
+python-versions = ">=3.11,<4.0"
+content-hash = "dc0ad9b07e45a2e07b80ee94799b1bdaca265b44328a9c7d3fb02b0943487c74"
