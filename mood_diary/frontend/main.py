@@ -1,7 +1,7 @@
 import datetime
 from mood_diary.frontend.shared.helper.requests_session import (
     provide_requests_session,
-)  # type: ignore
+)
 import altair as alt
 import pandas as pd
 import streamlit as st
