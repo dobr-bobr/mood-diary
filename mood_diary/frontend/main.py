@@ -1,5 +1,5 @@
 import datetime
-from shared.helper.requests_session import (
+from mood_diary.frontend.shared.helper.requests_session import (
     provide_requests_session,
 )  # type: ignore
 import altair as alt

@@ -1,5 +1,5 @@
 import streamlit as st
-from shared.helper.requests_session import (
+from mood_diary.frontend.shared.helper.requests_session import (
     provide_requests_session,
 )  # type: ignore[import-not-found]
 
