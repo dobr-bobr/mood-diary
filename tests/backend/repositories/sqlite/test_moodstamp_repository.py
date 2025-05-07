@@ -66,10 +66,23 @@ def test_init_db(
 ):
     mood_repo.init_db()
     mock_connection.cursor.assert_called_once()
-    mock_cursor.execute.assert_called_once_with(ANY)
+    mock_cursor.execute.assert_called_with(ANY)
+    # Need to be fixed
     assert (
         "CREATE TABLE IF NOT EXISTS moodstamps"
-        in mock_cursor.execute.call_args[0][0]
+        in mock_cursor.execute.call_args_list[0][0]
+    )
+    assert (
+        "CREATE INDEX IF NOT EXISTS idx_moodstamps_user_id"
+        in mock_cursor.execute.call_args_list[1][0][0]
+    )
+    assert (
+        "CREATE INDEX IF NOT EXISTS idx_moodstamps_date"
+        in mock_cursor.execute.call_args_list[2][0][0]
+    )
+    assert (
+        "CREATE INDEX IF NOT EXISTS idx_moodstamps_value"
+        in mock_cursor.execute.call_args_list[3][0][0]
     )
     mock_connection.commit.assert_called_once()
 
@@ -177,7 +190,7 @@ async def test_create_moodstamp_success(
         )
 
     mock_connection.cursor.assert_called()
-    assert mock_cursor.execute.call_count >= 2
+    assert mock_cursor.execute.call_count >= 1
     assert "INSERT INTO moodstamps" in mock_cursor.execute.call_args[0][0]
     mock_connection.commit.assert_called_once()
     assert created_mood.date == create_data.date

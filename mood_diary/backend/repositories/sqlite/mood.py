@@ -1,4 +1,5 @@
 import sqlite3
+import bleach
 from datetime import datetime, date
 from typing import Union
 from uuid import UUID, uuid4
@@ -109,6 +110,7 @@ class SQLiteMoodRepository(MoodStampRepository):
 
 		stamp_id = uuid4()
 		created_at = updated_at = datetime.now()
+		sanitized_note = bleach.clean(body.note, strip=True)
 
 		cursor.execute(
 			"""INSERT INTO moodstamps
@@ -119,7 +121,7 @@ class SQLiteMoodRepository(MoodStampRepository):
 				str(user_id),
 				body.date,
 				body.value,
-				body.note,
+				sanitized_note,
 				created_at,
 				updated_at,
 			),
