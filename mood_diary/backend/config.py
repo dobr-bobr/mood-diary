@@ -24,5 +24,12 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_CACHE_TTL: int = 60  # seconds
 
+    # Logging configuration
+    LOGGING_LEVEL: str = "INFO"
+    LOGGING_FORMAT: str = (
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    LOGGING_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
+
 
 config = Settings()
