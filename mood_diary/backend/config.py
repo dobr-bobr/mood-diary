@@ -18,7 +18,11 @@ class Settings(BaseSettings):
 
     ROOT_PATH: str = "/api"
 
-    SQLITE_DB_PATH: str = "mood_diary.db"
+    SQLITE_DB_PATH: str = "data/mood_diary.db"
+
+    REDIS_HOST: str = "redis"
+    REDIS_PORT: int = 6379
+    REDIS_CACHE_TTL: int = 60  # seconds
 
 
 config = Settings()

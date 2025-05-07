@@ -1,6 +1,8 @@
 from uuid import UUID
+import json
 
 from fastapi import APIRouter, Response, Depends, status
+import redis.asyncio as aioredis
 
 from mood_diary.backend.routes.dependencies import (
     get_current_user_id,
@@ -17,6 +19,7 @@ from mood_diary.common.api.schemas.auth import (
 from mood_diary.common.api.schemas.common import MessageResponse
 
 from mood_diary.backend.config import config
+from mood_diary.backend.database.cache import get_redis_client
 
 router = APIRouter()
 
@@ -127,8 +130,19 @@ async def validate_token(user_id: UUID = Depends(get_current_user_id)):
 async def get_profile(
     user_id: UUID = Depends(get_current_user_id),
     service: UserService = Depends(get_user_service),
+    redis: aioredis.Redis = Depends(get_redis_client),
 ):
-    return await service.get_profile(user_id)
+    cache_key = f"profile:{user_id}"
+    cached_profile = await redis.get(cache_key)
+
+    if cached_profile:
+        return Profile(**json.loads(cached_profile))
+
+    profile = await service.get_profile(user_id)
+    await redis.set(
+        cache_key, profile.model_dump_json(), ex=config.REDIS_CACHE_TTL
+    )
+    return profile
 
 
 @router.put(
@@ -151,8 +165,12 @@ async def change_password(
     request: ChangePasswordRequest,
     user_id: UUID = Depends(get_current_user_id),
     service: UserService = Depends(get_user_service),
+    redis: aioredis.Redis = Depends(get_redis_client),
 ):
-    return await service.change_password(user_id, request)
+    result = await service.change_password(user_id, request)
+    cache_key = f"profile:{user_id}"
+    await redis.delete(cache_key)
+    return result
 
 
 @router.put(
@@ -170,5 +188,9 @@ async def update_profile(
     request: ChangeProfileRequest,
     user_id: UUID = Depends(get_current_user_id),
     service: UserService = Depends(get_user_service),
+    redis: aioredis.Redis = Depends(get_redis_client),
 ):
-    return await service.update_profile(user_id, request)
+    profile = await service.update_profile(user_id, request)
+    cache_key = f"profile:{user_id}"
+    await redis.delete(cache_key)
+    return profile
