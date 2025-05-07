@@ -195,13 +195,13 @@ async def change_password(
 ):
     logger.info(f"Password change attempt for User ID: {user_id}")
     try:
-        result = await service.change_password(user_id, request)
+        await service.change_password(user_id, request)
         cache_key = f"profile:{user_id}"
         await redis.delete(cache_key)
         logger.info(
             f"Password changed successfully for User ID: {user_id}. Profile cache invalidated."
         )
-        return result
+        return Response(status_code=status.HTTP_200_OK)
     except Exception as e:
         logger.error(f"Password change failed for User ID {user_id}: {e}")
         raise
