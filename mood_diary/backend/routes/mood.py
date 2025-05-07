@@ -52,12 +52,14 @@ async def create(
     redis: aioredis.Redis = Depends(get_redis_client),
 ):
     logger.info(
-        f"User ID: {user_id} attempting to create mood stamp for date: {request.date}"
+        f"User ID: {user_id} attempting to create mood stamp "
+        f"for date: {request.date}"
     )
     try:
         moodstamp = await service.create(user_id=user_id, body=request)
         logger.info(
-            f"User ID: {user_id} created mood stamp ID: {moodstamp.id} for date: {request.date}"
+            f"User ID: {user_id} created mood stamp ID: {moodstamp.id} "
+            f"for date: {request.date}"
         )
         keys_to_delete = []
         async for key in redis.scan_iter(match=f"moodstamps:{user_id}:*"):
@@ -65,12 +67,14 @@ async def create(
         if keys_to_delete:
             await redis.delete(*keys_to_delete)
             logger.info(
-                f"User ID: {user_id} invalidated {len(keys_to_delete)} list cache(s) for mood stamps."
+                f"User ID: {user_id} invalidated {len(keys_to_delete)} "
+                f"list cache(s) for mood stamps."
             )
         return moodstamp
     except Exception as e:
         logger.error(
-            f"User ID: {user_id} failed to create mood stamp for date {request.date}: {e}"
+            f"User ID: {user_id} failed to create mood stamp for date "
+            f"{request.date}: {e}"
         )
         raise
 
@@ -118,7 +122,8 @@ async def get_moodstamp(
             cache_key, moodstamp.model_dump_json(), ex=config.REDIS_CACHE_TTL
         )
         logger.info(
-            f"Mood stamp fetched and cached for User ID: {user_id}, Date: {date}"
+            f"Mood stamp fetched and cached for User ID: {user_id}, "
+            f"Date: {date}"
         )
     else:
         logger.info(
@@ -156,7 +161,8 @@ async def get_many_moodstamps(
     redis: aioredis.Redis = Depends(get_redis_client),
 ):
     logger.info(
-        f"User ID: {user_id} fetching multiple mood stamps. Filters: start={start_date}, end={end_date}, value={value}"
+        f"User ID: {user_id} fetching multiple mood stamps. Filters: "
+        f"start={start_date}, end={end_date}, value={value}"
     )
     cache_key_params = {
         "start_date": start_date.isoformat() if start_date else "None",
@@ -171,14 +177,16 @@ async def get_many_moodstamps(
 
     if cached_moodstamps:
         logger.info(
-            f"Mood stamps list cache hit for User ID: {user_id}, Key: {cache_key}"
+            f"Mood stamps list cache hit for User ID: {user_id}, "
+            f"Key: {cache_key}"
         )
         return [
             MoodStampSchema(**item) for item in json.loads(cached_moodstamps)
         ]
 
     logger.info(
-        f"Mood stamps list cache miss for User ID: {user_id}, Key: {cache_key}"
+        f"Mood stamps list cache miss for User ID: {user_id}, "
+        f"Key: {cache_key}"
     )
     request_schema = GetManyMoodStampsRequest(
         start_date=start_date,
@@ -193,11 +201,13 @@ async def get_many_moodstamps(
             ex=config.REDIS_CACHE_TTL,
         )
         logger.info(
-            f"Mood stamps list fetched and cached for User ID: {user_id}, Key: {cache_key}. Count: {len(moodstamps)}"
+            f"Mood stamps list fetched and cached for User ID: {user_id}, "
+            f"Key: {cache_key}. Count: {len(moodstamps)}"
         )
     else:
         logger.info(
-            f"No mood stamps found for User ID: {user_id} with Key: {cache_key}"
+            f"No mood stamps found for User ID: {user_id} "
+            f"with Key: {cache_key}"
         )
     return moodstamps
 
@@ -250,12 +260,14 @@ async def update_moodstamp(
         if keys_to_delete:
             await redis.delete(*keys_to_delete)
             logger.info(
-                f"User ID: {user_id} invalidated {len(keys_to_delete)} cache key(s) for mood stamp date: {date} and lists."
+                f"User ID: {user_id} invalidated {len(keys_to_delete)} cache "
+                f"key(s) for mood stamp date: {date} and lists."
             )
         return moodstamp
     except Exception as e:
         logger.error(
-            f"User ID: {user_id} failed to update mood stamp for date {date}: {e}"
+            f"User ID: {user_id} failed to update mood stamp for date "
+            f"{date}: {e}"
         )
         raise
 
@@ -295,11 +307,13 @@ async def delete_moodstamp(
         if keys_to_delete:
             await redis.delete(*keys_to_delete)
             logger.info(
-                f"User ID: {user_id} invalidated {len(keys_to_delete)} cache key(s) for mood stamp date: {date} and lists."
+                f"User ID: {user_id} invalidated {len(keys_to_delete)} cache "
+                f"key(s) for mood stamp date: {date} and lists."
             )
         return MessageResponse(message="MoodStamp deleted successfully")
     except Exception as e:
         logger.error(
-            f"User ID: {user_id} failed to delete mood stamp for date {date}: {e}"
+            f"User ID: {user_id} failed to delete mood stamp for date "
+            f"{date}: {e}"
         )
         raise

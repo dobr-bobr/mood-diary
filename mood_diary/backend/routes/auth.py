@@ -54,7 +54,8 @@ async def register(
     try:
         profile = await service.register(request)
         logger.info(
-            f"User registered successfully. User ID: {profile.id}, Username: {profile.username}"
+            f"User registered successfully. "
+            f"User ID: {profile.id}, Username: {profile.username}"
         )
         return profile
     except Exception as e:
@@ -199,7 +200,8 @@ async def change_password(
         cache_key = f"profile:{user_id}"
         await redis.delete(cache_key)
         logger.info(
-            f"Password changed successfully for User ID: {user_id}. Profile cache invalidated."
+            f"Password changed successfully for User ID: {user_id}. "
+            f"Profile cache invalidated."
         )
         return Response(status_code=status.HTTP_200_OK)
     except Exception as e:
@@ -225,14 +227,16 @@ async def update_profile(
     redis: aioredis.Redis = Depends(get_redis_client),
 ):
     logger.info(
-        f"Profile update attempt for User ID: {user_id}. New name: {request.name}"
+        f"Profile update attempt for User ID: {user_id}. "
+        f"New name: {request.name}"
     )
     try:
         profile = await service.update_profile(user_id, request)
         cache_key = f"profile:{user_id}"
         await redis.delete(cache_key)
         logger.info(
-            f"Profile updated successfully for User ID: {user_id}. Profile cache invalidated."
+            f"Profile updated successfully for User ID: {user_id}. "
+            f"Profile cache invalidated."
         )
         return profile
     except Exception as e:

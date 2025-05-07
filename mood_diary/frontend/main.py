@@ -1,5 +1,7 @@
 import datetime
-from shared.helper.requests_session import provide_requests_session  # type: ignore[import-not-found]
+from shared.helper.requests_session import (
+    provide_requests_session,
+)  # type: ignore[import-not-found]
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -91,7 +93,7 @@ def fetch_create_mood(value, note):
             error_msg = response.json().get(
                 "detail", "Mood for this date already exists"
             )
-            st.warning(f"{error_msg}")
+            st.warning(f"{error_msg}")  # noqa: E501
             return False
         elif response.status_code == 401:
             st.switch_page("pages/authorization.py")
@@ -237,6 +239,12 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
 
         with col:
             selected = st.session_state.selected_rating == rating_value
+            border_style = (
+                "border: 3px solid white !important;" if selected else ""
+            )
+            shadow_style = (
+                "box-shadow: 0 0 10px white !important;" if selected else ""
+            )
             st.markdown(
                 f"""
                 <style>
@@ -247,7 +255,8 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
                     width: 100% !important;
                     height: 40px !important;
                     margin: 2px 0 !important;
-                    {'border: 3px solid white !important; box-shadow: 0 0 10px white !important;' if selected else ''}
+                    {border_style}
+                    {shadow_style}
                 }}
                 </style>
                 """,
