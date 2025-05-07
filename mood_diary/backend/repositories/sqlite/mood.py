@@ -40,8 +40,7 @@ class SQLiteMoodRepository(MoodStampRepository):
         cursor = self.connection.cursor()
         cursor.execute(
             "SELECT * FROM moodstamps WHERE date = ? AND user_id = ?",
-            date,
-            user_id,
+            (date, str(user_id)),
         )
         row = cursor.fetchone()
         if row:
@@ -72,6 +71,8 @@ class SQLiteMoodRepository(MoodStampRepository):
         if body.value is not None:
             query += " AND value = ?"
             params.append(body.value)
+
+        query += " ORDER BY date DESC"
 
         cursor.execute(query, params)
         rows = cursor.fetchall()

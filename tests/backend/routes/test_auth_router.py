@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import Depends, Cookie, status
@@ -12,7 +12,6 @@ from mood_diary.backend.exceptions.user import (
     IncorrectPasswordOrUserDoesNotExists,
     InvalidOrExpiredAccessToken,
     UsernameAlreadyExists,
-    UserNotFound,
 )
 from mood_diary.backend.app import get_app
 from mood_diary.backend.routes.dependencies import (
@@ -20,11 +19,11 @@ from mood_diary.backend.routes.dependencies import (
     get_token_manager,
     get_user_service,
 )
+from mood_diary.backend.database.cache import get_redis_client
 from mood_diary.backend.services.user import UserService
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
     TokenManager,
-    TokenType,
 )
 from mood_diary.common.api.schemas.auth import (
     LoginResponse,
@@ -35,6 +34,22 @@ from mood_diary.common.api.schemas.auth import (
 @pytest.fixture
 def mock_user_service():
     return AsyncMock(spec=UserService)
+
+
+@pytest.fixture
+def mock_redis_client() -> AsyncMock:
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = None
+    mock_redis.set.return_value = None
+    mock_redis.delete.return_value = None
+
+    async def mock_scan_iter(*args, **kwargs):
+        if False:
+            yield
+        return
+
+    mock_redis.scan_iter = mock_scan_iter
+    return mock_redis
 
 
 @pytest.fixture
@@ -49,12 +64,20 @@ def test_token_manager() -> TokenManager:
 
 @pytest.fixture
 def main_app():
-    return get_app(Settings(AUTH_TOKEN_SECRET_KEY="fixed-test-secret-key"))
+    test_settings = Settings(
+        AUTH_TOKEN_SECRET_KEY="fixed-test-secret-key",
+        SQLITE_DB_PATH=":memory:",
+        REDIS_HOST="mocked_redis",
+    )
+    return get_app(test_settings)
 
 
 @pytest.fixture
 def override_dependencies(
-    mock_user_service: AsyncMock, test_token_manager: TokenManager, main_app
+    mock_user_service: AsyncMock,
+    test_token_manager: TokenManager,
+    main_app,
+    mock_redis_client: AsyncMock,
 ):
     test_user_id = uuid.uuid4()
 
@@ -74,6 +97,7 @@ def override_dependencies(
     main_app.dependency_overrides[get_current_user_id] = (
         mock_get_current_user_id_simple_check
     )
+    main_app.dependency_overrides[get_redis_client] = lambda: mock_redis_client
 
     yield test_user_id
 
@@ -211,7 +235,7 @@ def test_change_password_success(
     client.cookies.set("access_token", "valid.token.for.test")
     response = client.put("/api/auth/password", json=password_payload)
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() is None
+    assert response.content == b""
     mock_user_service.change_password.assert_awaited_once()
     call_args = mock_user_service.change_password.call_args[0]
     assert call_args[0] == user_id
