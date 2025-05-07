@@ -43,6 +43,8 @@ httpx = "^0.28.1"
 pytest-asyncio = "^0.26.0"
 mypy = "^1.15.0"
 mutmut = "^2.5.1"
+pandas-stubs = "^2.2.2.240818"
+types-requests = "^2.32.0.20240818"
 
 [tool.pytest.ini_options]
 pythonpath = [
@@ -51,6 +53,10 @@ pythonpath = [
 
 [tool.mypy]
 plugins = ['pydantic.mypy']
+
+[[tool.mypy.overrides]]
+module = "extra_streamlit_components"
+ignore_missing_imports = true
 
 [tool.mutmut]
 paths_to_mutate="mood_diary"

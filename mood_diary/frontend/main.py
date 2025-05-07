@@ -1,5 +1,5 @@
 import datetime
-from shared.helper.requests_session import provide_requests_session
+from shared.helper.requests_session import provide_requests_session  # type: ignore[import-not-found]
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -86,7 +86,6 @@ def fetch_create_mood(value, note):
 
         if response.status_code == 200:
             st.success("Mood entry created successfully!")
-            get_user_ratings_data.clear()
             return True
         elif response.status_code == 400:
             error_msg = response.json().get(

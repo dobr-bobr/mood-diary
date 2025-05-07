@@ -1,5 +1,5 @@
 import streamlit as st
-from shared.helper.requests_session import provide_requests_session
+from shared.helper.requests_session import provide_requests_session  # type: ignore[import-not-found]
 
 st.set_page_config(
     page_title="Authorization",

@@ -1,9 +1,9 @@
 import time
 
 import streamlit as st
-from shared.helper.check_passwords import compare_passwords
+from shared.helper.check_passwords import compare_passwords  # type: ignore[import-not-found]
 
-from shared.helper.requests_session import provide_requests_session
+from shared.helper.requests_session import provide_requests_session  # type: ignore[import-not-found]
 
 st.set_page_config(
     page_title="Registration",
