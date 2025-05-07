@@ -16,6 +16,7 @@ from mood_diary.backend.routes.dependencies import (
     get_mood_service,
     get_current_user_id,
 )
+from mood_diary.backend.database.cache import get_redis_client
 from mood_diary.backend.services.mood import MoodService
 from mood_diary.common.api.schemas.mood import (
     CreateMoodStampRequest,
@@ -36,13 +37,31 @@ def mock_mood_service() -> AsyncMock:
 
 
 @pytest.fixture
+def mock_redis_client() -> AsyncMock:
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = None
+    mock_redis.set.return_value = None
+    mock_redis.delete.return_value = None
+
+    async def mock_scan_iter(*args, **kwargs):
+        if False:
+            yield
+        return
+
+    mock_redis.scan_iter = mock_scan_iter
+    return mock_redis
+
+
+@pytest.fixture
 def test_user_id() -> uuid.UUID:
     return uuid.uuid4()
 
 
 @pytest.fixture
 def main_app_mood(
-    test_user_id: uuid.UUID, mock_mood_service: AsyncMock
+    test_user_id: uuid.UUID,
+    mock_mood_service: AsyncMock,
+    mock_redis_client: AsyncMock,
 ) -> FastAPI:
     app = FastAPI()
     app.include_router(mood_router, prefix="/api/moods", tags=["moods"])
@@ -57,10 +76,14 @@ def main_app_mood(
     def override_get_mood_service() -> MoodService:
         return mock_mood_service
 
+    def override_get_redis_client():
+        return mock_redis_client
+
     app.dependency_overrides[get_current_user_id] = (
         override_get_current_user_id
     )
     app.dependency_overrides[get_mood_service] = override_get_mood_service
+    app.dependency_overrides[get_redis_client] = override_get_redis_client
 
     return app
 
