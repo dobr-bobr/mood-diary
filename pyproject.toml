@@ -58,6 +58,10 @@ plugins = ['pydantic.mypy']
 module = "extra_streamlit_components"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "mood_diary.frontend.*"
+disable_error_code = ["import-not-found"]
+
 [tool.mutmut]
 paths_to_mutate="mood_diary"
 runner="poetry run pytest ./tests/"

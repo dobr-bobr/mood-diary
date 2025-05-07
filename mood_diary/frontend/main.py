@@ -1,7 +1,7 @@
 import datetime
 from shared.helper.requests_session import (
     provide_requests_session,
-)  # type: ignore[import-not-found]
+)  # type: ignore
 import altair as alt
 import pandas as pd
 import streamlit as st
