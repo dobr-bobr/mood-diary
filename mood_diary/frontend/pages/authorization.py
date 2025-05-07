@@ -1,7 +1,7 @@
 import streamlit as st
 from mood_diary.frontend.shared.helper.requests_session import (
     provide_requests_session,
-)  # type: ignore[import-not-found]
+)
 
 st.set_page_config(
     page_title="Authorization",
