@@ -1,30 +1,8 @@
 import datetime
-from shared.helper.requests_session import (
-    provide_requests_session,
-)  # type: ignore
+from mood_diary.frontend.shared.api.api import fetch_profile, fetch_all_mood, fetch_create_mood
 import altair as alt
 import pandas as pd
 import streamlit as st
-
-BASE_URL = "https://mood-diary.duckdns.org/api"
-session = provide_requests_session()
-
-
-def fetch_profile():
-    try:
-        response = session.get(f"{BASE_URL}/auth/profile")
-        if response.status_code == 200:
-            profile_data = response.json()
-            st.session_state.name = profile_data.get("name", "User")
-        elif response.status_code == 401:
-            st.switch_page("pages/authorization.py")
-        else:
-            st.error("Failed to load user profile")
-            st.stop()
-    except Exception as e:
-        st.error(f"Error fetching profile: {e}")
-        st.stop()
-
 
 fetch_profile()
 st.markdown(
@@ -57,61 +35,6 @@ st.markdown(
 """,
     unsafe_allow_html=True,
 )
-
-
-def fetch_all_mood(start_date=None, end_date=None, value=None):
-    try:
-        params = {}
-        if value is not None:
-            params["value"] = value
-        if start_date is not None:
-            params["start_date"] = start_date
-        if end_date is not None:
-            params["end_date"] = end_date
-
-        response = session.get(f"{BASE_URL}/mood", params=params)
-
-        if response.status_code == 200:
-            return response.json()
-        elif response.status_code == 401:
-            st.switch_page("pages/authorization.py")
-        else:
-            st.error(f"Failed to load user mood: {response.status_code}")
-            st.stop()
-    except Exception as e:
-        st.error(f"Error fetching mood: {e}")
-        st.stop()
-
-
-def fetch_create_mood(date, value, note):
-    try:
-        payload = {
-            "date": date.isoformat(),
-            "value": value,
-            "note": note,
-        }
-
-        response = session.post(f"{BASE_URL}/mood", json=payload)
-
-        if response.status_code == 200:
-            st.success("Mood entry created successfully!")
-            return True
-        elif response.status_code == 400:
-            error_msg = response.json().get(
-                "detail", "Mood for this date already exists"
-            )
-            st.warning(f"{error_msg}")
-            return False
-        elif response.status_code == 401:
-            st.switch_page("pages/authorization.py")
-        else:
-            st.error(
-                f"Failed to create mood: {response.status_code} - {response.text}"
-            )
-            return False
-    except Exception as e:
-        st.error(f"Error creating mood: {e}")
-        return False
 
 
 def get_user_ratings_data():
@@ -286,7 +209,7 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
         max_value=datetime.date.today(),
     )
     st.session_state.selected_date = selected_date
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
     submitted = st.form_submit_button("Submit")
     if submitted:
@@ -299,7 +222,7 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
             success = fetch_create_mood(
                 st.session_state.selected_date,
                 st.session_state.selected_rating,
-                comment
+                comment,
             )
             if success:
                 st.session_state.form_comment = ""
