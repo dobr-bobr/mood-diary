@@ -16,6 +16,8 @@ services:
         max-size: "20m"
         max-file: "5"
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    depends_on:
+      - redis
 
   frontend:
     build:
@@ -23,6 +25,8 @@ services:
       dockerfile: Dockerfile
     container_name: mood_diary_frontend
     restart: unless-stopped
+    environment:
+      - PYTHONPATH=.
     env_file:
       - .env
     command: ["poetry", "run", "streamlit", "run", "mood_diary/frontend/main.py", "--server.port=8501", "--server.address=0.0.0.0"]
@@ -32,6 +36,8 @@ services:
         max-size: "20m"
         max-file: "5"
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+    depends_on:
+      - redis
 
   caddy:
     image: caddy:2
@@ -57,7 +63,23 @@ services:
         max-file: "5"
         tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
 
+  redis:
+    image: redis:alpine
+    container_name: mood_diary_redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+        tag: "{{.ImageName}}|{{.Name}}|{{.ImageFullID}}|{{.FullID}}"
+
 volumes:
   caddy_data:
   caddy_config:
   db_data:
+  redis_data:

@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
@@ -11,7 +12,15 @@ from mood_diary.backend.database.db import init_db
 from mood_diary.backend.exceptions.base import BaseApplicationException
 from mood_diary.backend.routes.auth import router as auth_router
 from mood_diary.backend.routes.mood import router as mood_router
+from mood_diary.backend.config import config
 
+logging.basicConfig(
+    level=config.LOGGING_LEVEL,
+    format=config.LOGGING_FORMAT,
+    datefmt=config.LOGGING_DATE_FORMAT,
+)
+
+logger = logging.getLogger(__name__)
 
 def get_app(app_config) -> FastAPI:
 	@asynccontextmanager

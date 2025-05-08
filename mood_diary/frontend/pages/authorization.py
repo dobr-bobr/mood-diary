@@ -1,5 +1,7 @@
 import streamlit as st
-from shared.helper.requests_session import provide_requests_session
+from mood_diary.frontend.shared.helper.requests_session import (
+    provide_requests_session,
+)
 
 st.set_page_config(
     page_title="Authorization",
@@ -9,7 +11,7 @@ st.set_page_config(
 
 
 def clear_user_data():
-    preserved_keys = ['username', 'password', 'access_token']
+    preserved_keys = ["username", "password", "access_token"]
 
     all_keys = list(st.session_state.keys())
 
@@ -39,9 +41,9 @@ def login():
         if response.status_code == 401:
             raise Exception(data["detail"])
         elif response.status_code == 422:
-            raise Exception(
-                f"{data['detail'][0]['loc'][1].capitalize()}: {data['detail'][0]['msg'].lower()}"
-            )
+            loc = data["detail"][0]["loc"][1].capitalize()
+            msg = data["detail"][0]["msg"].lower()
+            raise Exception(f"{loc}: {msg}")
         return data
     except Exception as e:
         st.error(f"{e}")
