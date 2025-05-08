@@ -1,9 +1,10 @@
 from uuid import UUID
 import json
 import logging
+import redis.asyncio as aioredis
 
 from fastapi import APIRouter, Response, Depends, status
-import redis.asyncio as aioredis
+from fastapi_csrf_protect import CsrfProtect
 
 from mood_diary.backend.routes.dependencies import (
     get_current_user_id,
@@ -17,6 +18,7 @@ from mood_diary.common.api.schemas.auth import (
     ChangePasswordRequest,
     ChangeProfileRequest,
 )
+from mood_diary.common.api.schemas.token import TokenWithCSRF
 from mood_diary.common.api.schemas.common import MessageResponse
 
 from mood_diary.backend.config import config
@@ -48,7 +50,9 @@ router = APIRouter()
     },
 )
 async def register(
-    request: RegisterRequest, service: UserService = Depends(get_user_service)
+    request: RegisterRequest,
+    service: UserService = Depends(get_user_service),
+    csrf_protect: CsrfProtect = Depends(),
 ):
     logger.info(f"Attempting registration for username: {request.username}")
     try:
@@ -67,9 +71,11 @@ async def register(
 
 @router.post(
     "/login",
+    response_model=TokenWithCSRF,
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {
+            "model": TokenWithCSRF,
             "description": "User logged in successfully",
         },
         status.HTTP_401_UNAUTHORIZED: {
@@ -88,7 +94,10 @@ async def register(
     },
 )
 async def login(
-    request: LoginRequest, service: UserService = Depends(get_user_service)
+    fastapi_response: Response,
+    request: LoginRequest,
+    service: UserService = Depends(get_user_service),
+    csrf_protect: CsrfProtect = Depends(),
 ):
     logger.info(f"Login attempt for username: {request.username}")
     try:
@@ -177,12 +186,21 @@ async def get_profile(
     status_code=status.HTTP_200_OK,
     responses={
         status.HTTP_200_OK: {"description": "Password changed successfully"},
-        status.HTTP_401_UNAUTHORIZED: {
+        status.HTTP_400_BAD_REQUEST: {
             "model": MessageResponse,
             "description": "Incorrect old password",
             "content": {
                 "application/json": {
                     "example": {"message": "Incorrect old password"}
+                }
+            },
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": MessageResponse,
+            "description": "Invalid or expired token",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Invalid or expired token"}
                 }
             },
         },

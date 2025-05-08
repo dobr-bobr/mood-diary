@@ -2,9 +2,11 @@ import logging
 import json
 from uuid import UUID
 from datetime import date
-from fastapi import APIRouter, Depends, status, Path
+from fastapi import APIRouter, Depends, status, Path, Request, Response
+from fastapi_csrf_protect import CsrfProtect
 import redis.asyncio as aioredis
 
+from mood_diary.backend.config import config
 from mood_diary.backend.routes.dependencies import (
     get_mood_service,
     get_current_user_id,
@@ -17,7 +19,6 @@ from mood_diary.common.api.schemas.mood import (
     MoodStampSchema,
 )
 from mood_diary.common.api.schemas.common import MessageResponse
-from mood_diary.backend.config import config
 from mood_diary.backend.database.cache import get_redis_client
 
 logger = logging.getLogger("mood_diary.backend.app")
@@ -77,6 +78,20 @@ async def create(
             f"{request.date}: {e}"
         )
         raise
+
+
+@router.get(
+    "/csrf-token",
+    status_code=status.HTTP_200_OK,
+)
+async def get_csrf_token(
+    fastapi_request: Request, csrf_protect: CsrfProtect = Depends()
+):
+    response = Response(status_code=status.HTTP_200_OK)
+    csrf_protect.set_csrf_cookie(
+        csrf_signed_token=config.CSRF_SECRET_KEY, response=response
+    )
+    return response
 
 
 @router.get(

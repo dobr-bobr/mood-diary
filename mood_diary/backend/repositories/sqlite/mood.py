@@ -1,4 +1,5 @@
 import sqlite3
+import bleach
 from datetime import datetime, date
 from typing import Union
 from uuid import UUID, uuid4
@@ -30,11 +31,48 @@ class SQLiteMoodRepository(MoodStampRepository):
                 note TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                UNIQUE (user_id, date)
             )
             """
         )
+        self.create_indexes()
         self.connection.commit()
+
+    def create_indexes(self):
+        cursor = self.connection.cursor()
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_moodstamps_user_date
+            ON moodstamps (user_id, date)
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_moodstamps_user
+            ON moodstamps (user_id)
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_moodstamps_date
+            ON moodstamps (date)
+            """
+        )
+
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_moodstamps_value
+            ON moodstamps(value)
+            """
+        )
 
     async def get(self, user_id: UUID, date: date) -> MoodStamp | None:
         cursor = self.connection.cursor()
@@ -49,7 +87,7 @@ class SQLiteMoodRepository(MoodStampRepository):
                 user_id=row["user_id"],
                 date=row["date"],
                 value=row["value"],
-                note=row["note"],
+                note=bleach.clean(row["note"]),
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
             )
@@ -83,7 +121,7 @@ class SQLiteMoodRepository(MoodStampRepository):
                 user_id=row["user_id"],
                 date=row["date"],
                 value=row["value"],
-                note=row["note"],
+                note=bleach.clean(row["note"]),
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
             )
@@ -107,7 +145,7 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         stamp_id = uuid4()
         created_at = updated_at = datetime.now()
-
+        sanitized_note = bleach.clean(body.note)
         cursor.execute(
             """INSERT INTO moodstamps
             (id, user_id, date, value, note, created_at, updated_at)
@@ -117,7 +155,7 @@ class SQLiteMoodRepository(MoodStampRepository):
                 str(user_id),
                 body.date,
                 body.value,
-                body.note,
+                sanitized_note,
                 created_at,
                 updated_at,
             ),
@@ -126,10 +164,10 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         return MoodStamp(
             id=stamp_id,
-            user_id=body.user_id,
+            user_id=user_id,
             date=body.date,
             value=body.value,
-            note=body.note,
+            note=sanitized_note,
             created_at=created_at,
             updated_at=updated_at,
         )
@@ -140,7 +178,6 @@ class SQLiteMoodRepository(MoodStampRepository):
         """Update moodstamp by date. Returns None if moodstamp not found"""
         cursor = self.connection.cursor()
 
-        # First get the existing stamp
         cursor.execute(
             "SELECT * FROM moodstamps WHERE user_id = ? AND date = ?",
             (str(user_id), date),
@@ -150,13 +187,15 @@ class SQLiteMoodRepository(MoodStampRepository):
             return None
 
         updated_at = datetime.now()
+        sanitized_note = bleach.clean(
+            body.note if body.note is not None else row["note"]
+        )
         update_values = {
             "value": body.value if body.value is not None else row["value"],
-            "note": body.note if body.note is not None else row["note"],
+            "note": sanitized_note,
             "updated_at": updated_at,
         }
 
-        # Perform the update
         cursor.execute(
             """UPDATE moodstamps
             SET value = ?, note = ?, updated_at = ?
@@ -185,7 +224,6 @@ class SQLiteMoodRepository(MoodStampRepository):
         """Delete moodstamp by date. Returns None if stamp not found"""
         cursor = self.connection.cursor()
 
-        # First get the stamp to return it
         cursor.execute(
             "SELECT * FROM moodstamps WHERE user_id = ? AND date = ?",
             (str(user_id), date),
@@ -194,7 +232,6 @@ class SQLiteMoodRepository(MoodStampRepository):
         if not row:
             return None
 
-        # Delete the stamp
         cursor.execute(
             "DELETE FROM moodstamps WHERE user_id = ? AND date = ?",
             (str(user_id), date),
@@ -206,7 +243,7 @@ class SQLiteMoodRepository(MoodStampRepository):
             user_id=user_id,
             date=date,
             value=row["value"],
-            note=row["note"],
+            note=bleach.clean(row["note"]),
             created_at=row["created_at"],
             updated_at=row["updated_at"],
         )
