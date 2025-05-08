@@ -14,7 +14,6 @@ from mood_diary.backend.utils.token_manager import (
 SECRET_KEY = "test-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXP_MINUTES = 1
-REFRESH_TOKEN_EXP_MINUTES = 5
 
 
 @pytest.fixture(scope="module")
@@ -23,7 +22,6 @@ def token_manager() -> JWTTokenManager:
         secret_key=SECRET_KEY,
         algorithm=ALGORITHM,
         access_token_exp_minutes=ACCESS_TOKEN_EXP_MINUTES,
-        refresh_token_exp_minutes=REFRESH_TOKEN_EXP_MINUTES,
     )
 
 
@@ -36,14 +34,6 @@ def test_create_access_token(
     token_manager: JWTTokenManager, user_id: uuid.UUID
 ):
     token = token_manager.create_token(TokenType.ACCESS, user_id)
-    assert isinstance(token, str)
-    assert len(token) > 0
-
-
-def test_create_refresh_token(
-    token_manager: JWTTokenManager, user_id: uuid.UUID
-):
-    token = token_manager.create_token(TokenType.REFRESH, user_id)
     assert isinstance(token, str)
     assert len(token) > 0
 
@@ -61,19 +51,6 @@ def test_decode_valid_access_token(
     assert payload.exp > payload.iat
 
 
-def test_decode_valid_refresh_token(
-    token_manager: JWTTokenManager, user_id: uuid.UUID
-):
-    token = token_manager.create_token(TokenType.REFRESH, user_id)
-    payload = token_manager.decode_token(token)
-
-    assert payload is not None
-    assert isinstance(payload, TokenPayload)
-    assert payload.user_id == user_id
-    assert payload.type == TokenType.REFRESH
-    assert payload.exp > payload.iat
-
-
 def test_decode_invalid_token(token_manager: JWTTokenManager):
     invalid_token = "this.is.not.a.valid.token"
     payload = token_manager.decode_token(invalid_token)
@@ -86,8 +63,7 @@ def test_decode_expired_access_token(
     short_exp_manager = JWTTokenManager(
         secret_key=SECRET_KEY,
         algorithm=ALGORITHM,
-        access_token_exp_minutes=0.001,
-        refresh_token_exp_minutes=1,
+        access_token_exp_minutes=0,
     )
     token = short_exp_manager.create_token(TokenType.ACCESS, user_id)
 
@@ -106,7 +82,6 @@ def test_decode_token_wrong_secret(
         secret_key="wrong-secret",
         algorithm=ALGORITHM,
         access_token_exp_minutes=ACCESS_TOKEN_EXP_MINUTES,
-        refresh_token_exp_minutes=REFRESH_TOKEN_EXP_MINUTES,
     )
 
     payload = wrong_secret_manager.decode_token(token)
@@ -131,8 +106,7 @@ def test_is_token_valid_expired(
     short_exp_manager = JWTTokenManager(
         secret_key=SECRET_KEY,
         algorithm=ALGORITHM,
-        access_token_exp_minutes=0.001,
-        refresh_token_exp_minutes=1,
+        access_token_exp_minutes=0,
     )
     token = short_exp_manager.create_token(TokenType.ACCESS, user_id)
     sleep(0.1)
@@ -147,14 +121,6 @@ def test_get_token_type_access(
     assert token_type == TokenType.ACCESS
 
 
-def test_get_token_type_refresh(
-    token_manager: JWTTokenManager, user_id: uuid.UUID
-):
-    token = token_manager.create_token(TokenType.REFRESH, user_id)
-    token_type = token_manager.get_token_type(token)
-    assert token_type == TokenType.REFRESH
-
-
 def test_get_token_type_invalid(token_manager: JWTTokenManager):
     invalid_token = "invalid.token"
     token_type = token_manager.get_token_type(invalid_token)
@@ -167,8 +133,7 @@ def test_get_token_type_expired(
     short_exp_manager = JWTTokenManager(
         secret_key=SECRET_KEY,
         algorithm=ALGORITHM,
-        access_token_exp_minutes=0.001,
-        refresh_token_exp_minutes=1,
+        access_token_exp_minutes=0,
     )
     token = short_exp_manager.create_token(TokenType.ACCESS, user_id)
     sleep(0.1)

@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDE / Editor specific
+.vscode/
+.idea/
+*.swp
+*~
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+
+# Docker
+.dockerignore
+Dockerfile
+docker-compose.yml
+
+# Other
+.env
+.pytest_cache/
+db_data/
+caddy_data/
+caddy_config/
+*.log 

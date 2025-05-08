@@ -9,7 +9,6 @@ from pydantic import BaseModel
 
 class TokenType(str, Enum):
     ACCESS = "ACCESS"
-    REFRESH = "REFRESH"
 
 
 class TokenPayload(BaseModel):
@@ -42,21 +41,16 @@ class JWTTokenManager(TokenManager):
         self,
         secret_key: str,
         algorithm: str,
-        access_token_exp_minutes: float,
-        refresh_token_exp_minutes: float,
+        access_token_exp_minutes: int,
     ):
         self.secret_key = secret_key
         self.algorithm = algorithm
         self.access_token_exp = timedelta(minutes=access_token_exp_minutes)
-        self.refresh_token_exp = timedelta(minutes=refresh_token_exp_minutes)
 
     def create_token(self, token_type: TokenType, user_id: UUID) -> str:
         now = datetime.now(UTC)
 
-        if token_type == TokenType.ACCESS:
-            exp = now + self.access_token_exp
-        else:
-            exp = now + self.refresh_token_exp
+        exp = now + self.access_token_exp
 
         payload = TokenPayload(
             type=token_type,
@@ -96,4 +90,4 @@ class JWTTokenManager(TokenManager):
 
     def get_token_type(self, token: str) -> TokenType | None:
         payload = self.decode_token(token)
-        return payload.type if payload else None
+        return TokenType.ACCESS if payload else None

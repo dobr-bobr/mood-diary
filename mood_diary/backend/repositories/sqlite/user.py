@@ -120,8 +120,8 @@ class SQLiteUserRepository(UserRepository):
     ) -> User | None:
         cursor = self.connection.cursor()
         cursor.execute(
-            "UPDATE users"
-            "SET hashed_password = ?, password_updated_at = ?"
+            "UPDATE users "
+            "SET hashed_password = ?, password_updated_at = ? "
             "WHERE id = ?",
             (body.hashed_password, datetime.now(UTC), str(user_id)),
         )

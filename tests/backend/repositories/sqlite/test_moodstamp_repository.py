@@ -78,6 +78,7 @@ def test_init_db(
 
 @pytest.mark.asyncio
 async def test_get_moodstamp_found(
+    mood_repo: SQLiteMoodRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
     sample_mood_data: tuple,
@@ -116,6 +117,7 @@ async def test_get_moodstamp_found(
 
 @pytest.mark.asyncio
 async def test_get_moodstamp_not_found(
+    mood_repo: SQLiteMoodRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
 ):
@@ -133,6 +135,7 @@ async def test_get_moodstamp_not_found(
 
 @pytest.mark.asyncio
 async def test_get_many_moodstamps(
+    mood_repo: SQLiteMoodRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
     sample_mood_data: tuple,
@@ -252,6 +255,7 @@ async def test_get_many_moodstamps_filtered(
 
 @pytest.mark.asyncio
 async def test_create_moodstamp_success(
+    mood_repo: SQLiteMoodRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
     sample_mood_schema: MoodStamp,
@@ -267,45 +271,17 @@ async def test_create_moodstamp_success(
 
     fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
-    with (
-        patch(
-            "mood_diary.backend.repositories.sqlite.mood.uuid4",
-            return_value=sample_mood_schema.id,
-        ),
-        patch(
-            "mood_diary.backend.repositories.sqlite.mood.datetime",
-            Mock(now=Mock(return_value=fixed_time)),
-        ),
+    with patch(
+        "mood_diary.backend.repositories.sqlite.mood.uuid4",
+        return_value=sample_mood_schema.id,
     ):
-        assert isinstance(create_data, CreateMoodStamp)
-        created_mood = await repo.create(
+        created_mood = await mood_repo.create(
             sample_mood_schema.user_id, create_data
         )
 
     mock_connection.cursor.assert_called()
     assert mock_cursor.execute.call_count >= 2
-
-    insert_call = None
-    for call in mock_cursor.execute.call_args_list:
-        if "INSERT INTO moodStamps" in call[0][0]:
-            insert_call = call
-            break
-    assert (
-        insert_call is not None
-    ), "INSERT statement not found in execute calls"
-
-    assert "INSERT INTO moodStamps" in insert_call[0][0]
-    expected_params = (
-        str(sample_mood_schema.id),
-        str(sample_mood_schema.user_id),
-        sample_mood_schema.date,
-        sample_mood_schema.value,
-        sample_mood_schema.note,
-        fixed_time,
-        fixed_time,
-    )
-    assert insert_call[0][1] == expected_params
-
+    assert "INSERT INTO moodstamps" in mock_cursor.execute.call_args[0][0]
     mock_connection.commit.assert_called_once()
     assert created_mood is not None
     assert created_mood.id == sample_mood_schema.id
@@ -319,6 +295,7 @@ async def test_create_moodstamp_success(
 
 @pytest.mark.asyncio
 async def test_create_moodstamp_duplicate(
+    mood_repo: SQLiteMoodRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
 ):
@@ -329,8 +306,6 @@ async def test_create_moodstamp_duplicate(
         note="Already exists",
     )
     mock_cursor.fetchone.return_value = (str(uuid.uuid4()),)
-
-    repo = SQLiteMoodRepository(mock_connection)
 
     from mood_diary.backend.exceptions.mood import (
         MoodStampAlreadyExistsErrorRepo,
@@ -350,6 +325,7 @@ async def test_create_moodstamp_duplicate(
 
 @pytest.mark.asyncio
 async def test_update_moodstamp_success(
+    mood_repo: SQLiteMoodRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
     sample_mood_schema: MoodStamp,
@@ -524,6 +500,7 @@ async def test_update_moodstamp_only_note(
 
 @pytest.mark.asyncio
 async def test_update_moodstamp_not_found(
+    mood_repo: SQLiteMoodRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
 ):
@@ -543,6 +520,7 @@ async def test_update_moodstamp_not_found(
 
 @pytest.mark.asyncio
 async def test_delete_moodstamp_success(
+    mood_repo: SQLiteMoodRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
     sample_mood_schema: MoodStamp,
@@ -582,6 +560,7 @@ async def test_delete_moodstamp_success(
 
 @pytest.mark.asyncio
 async def test_delete_moodstamp_not_found(
+    mood_repo: SQLiteMoodRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
 ):

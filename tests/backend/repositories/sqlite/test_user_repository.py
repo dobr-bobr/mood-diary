@@ -12,7 +12,6 @@ from mood_diary.backend.repositories.sсhemas.user import (
     UpdateUserProfile,
     User,
 )
-
 from tests.backend.repositories.sqlite.base_fixtures import (
     mock_connection,
     mock_cursor,
@@ -188,6 +187,7 @@ async def test_get_by_username_not_found(
 
 @pytest.mark.asyncio
 async def test_create_user_success(
+    user_repo: SQLiteUserRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
     sample_user_schema: User,
@@ -202,15 +202,9 @@ async def test_create_user_success(
 
     fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
 
-    with (
-        patch(
-            "mood_diary.backend.repositories.sqlite.user.uuid4",
-            return_value=sample_user_schema.id,
-        ),
-        patch(
-            "mood_diary.backend.repositories.sqlite.user.datetime",
-            Mock(now=Mock(return_value=fixed_time)),
-        ),
+    with patch(
+        "mood_diary.backend.repositories.sqlite.user.uuid4",
+        return_value=sample_user_schema.id,
     ):
         created_user = await repo.create(create_data)
 
@@ -235,6 +229,7 @@ async def test_create_user_success(
 
 @pytest.mark.asyncio
 async def test_create_user_integrity_error(
+    user_repo: SQLiteUserRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
 ):
@@ -258,6 +253,7 @@ async def test_create_user_integrity_error(
 
 @pytest.mark.asyncio
 async def test_update_profile_success(
+    user_repo: SQLiteUserRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
     sample_user_schema: User,
@@ -282,6 +278,7 @@ async def test_update_profile_success(
 
 @pytest.mark.asyncio
 async def test_update_hashed_password_success(
+    user_repo: SQLiteUserRepository,
     mock_connection: AsyncMock,
     mock_cursor: MagicMock,
     sample_user_schema: User,

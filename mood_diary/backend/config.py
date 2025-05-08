@@ -13,12 +13,23 @@ class Settings(BaseSettings):
 
     AUTH_TOKEN_SECRET_KEY: str = ""
     AUTH_TOKEN_ALGORITHM: str = "HS256"
-    AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES: int = 30  # 30 minutes
-    AUTH_TOKEN_REFRESH_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
+    AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES: int = 360
+    AUTH_SECURE_COOKIE: bool = False
 
     ROOT_PATH: str = "/api"
 
-    SQLITE_DB_PATH: str = "mood_diary.db"
+    SQLITE_DB_PATH: str = "data/mood_diary.db"
+
+    REDIS_HOST: str = "redis"
+    REDIS_PORT: int = 6379
+    REDIS_CACHE_TTL: int = 60  # seconds
+
+    # Logging configuration
+    LOGGING_LEVEL: str = "INFO"
+    LOGGING_FORMAT: str = (
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    LOGGING_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
 
 config = Settings()

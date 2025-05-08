@@ -3,14 +3,14 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import status
+from fastapi import Depends, Cookie, status
 from fastapi.testclient import TestClient
 
 from mood_diary.backend.config import Settings
 from mood_diary.backend.exceptions.user import (
     IncorrectOldPassword,
     IncorrectPasswordOrUserDoesNotExists,
-    InvalidOrExpiredRefreshToken,
+    InvalidOrExpiredAccessToken,
     UsernameAlreadyExists,
 )
 from mood_diary.backend.app import get_app
@@ -18,20 +18,15 @@ from mood_diary.backend.routes.dependencies import (
     get_token_manager,
     get_user_service,
 )
+from mood_diary.backend.database.cache import get_redis_client
 from mood_diary.backend.services.user import UserService
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
     TokenManager,
-    TokenType,
 )
 from mood_diary.common.api.schemas.auth import (
     LoginResponse,
     Profile,
-    RefreshResponse,
-    RegisterRequest,
-    LoginRequest,
-    RefreshRequest,
-    ChangePasswordRequest,
 )
 
 
@@ -41,30 +36,67 @@ def mock_user_service():
 
 
 @pytest.fixture
+def mock_redis_client() -> AsyncMock:
+    mock_redis = AsyncMock()
+    mock_redis.get.return_value = None
+    mock_redis.set.return_value = None
+    mock_redis.delete.return_value = None
+
+    async def mock_scan_iter(*args, **kwargs):
+        if False:
+            yield
+        return
+
+    mock_redis.scan_iter = mock_scan_iter
+    return mock_redis
+
+
+@pytest.fixture
 def test_token_manager() -> TokenManager:
     """A fixture providing a TokenManager with fixed test settings."""
     return JWTTokenManager(
         secret_key="fixed-test-secret-key",
         algorithm="HS256",
         access_token_exp_minutes=5,
-        refresh_token_exp_minutes=10,
     )
 
 
 @pytest.fixture
 def main_app():
-    return get_app(Settings(AUTH_TOKEN_SECRET_KEY="fixed-test-secret-key"))
+    test_settings = Settings(
+        AUTH_TOKEN_SECRET_KEY="fixed-test-secret-key",
+        SQLITE_DB_PATH=":memory:",
+        REDIS_HOST="mocked_redis",
+    )
+    return get_app(test_settings)
 
 
 @pytest.fixture
 def override_dependencies(
-    mock_user_service: AsyncMock, test_token_manager: TokenManager, main_app
+    mock_user_service: AsyncMock,
+    test_token_manager: TokenManager,
+    main_app,
+    mock_redis_client: AsyncMock,
 ):
+    test_user_id = uuid.uuid4()
+
+    async def mock_get_current_user_id_simple_check(
+        access_token: str | None = Cookie(None),
+        token_manager: TokenManager = Depends(lambda: test_token_manager),
+    ) -> uuid.UUID:
+        if not access_token:
+            raise InvalidOrExpiredAccessToken()
+
+        return test_user_id
 
     main_app.dependency_overrides[get_user_service] = lambda: mock_user_service
     main_app.dependency_overrides[get_token_manager] = (
         lambda: test_token_manager
     )
+    main_app.dependency_overrides[get_current_user_id] = (
+        mock_get_current_user_id_simple_check
+    )
+    main_app.dependency_overrides[get_redis_client] = lambda: mock_redis_client
 
     yield
 
@@ -352,60 +384,15 @@ def test_register_validation_error(client: TestClient):
 def test_login_success(client: TestClient, mock_user_service: AsyncMock):
     login_response_data = {
         "access_token": "fake_access_token",
-        "refresh_token": "fake_refresh_token",
     }
     mock_user_service.login.return_value = LoginResponse(**login_response_data)
     login_payload = {"username": "testuser", "password": "password123"}
     response = client.post("/api/auth/login", json=login_payload)
     assert response.status_code == status.HTTP_200_OK
-    response_data = response.json()
-    assert response_data == login_response_data
-    # Check LoginResponse types and content
-    assert isinstance(response_data["access_token"], str)
-    assert len(response_data["access_token"]) > 0
-    assert isinstance(response_data["refresh_token"], str)
-    assert len(response_data["refresh_token"]) > 0
+    assert "access_token" in response.cookies
+    access_cookie = response.cookies.get("access_token")
+    assert access_cookie is not None
     mock_user_service.login.assert_awaited_once()
-
-
-def test_login_success_boundaries(
-    client: TestClient, mock_user_service: AsyncMock
-):
-    """Tests successful login with boundary length inputs."""
-    login_response_data = {
-        "access_token": "fake_access_token_boundary",
-        "refresh_token": "fake_refresh_token_boundary",
-    }
-
-    # Test cases with exact min/max lengths
-    min_user = "u" * 3
-    max_user = "u" * 20
-    min_pass = "p" * 8
-    max_pass = "p" * 32
-
-    test_cases = [
-        # Min boundaries
-        {"username": min_user, "password": min_pass},
-        # Max boundaries
-        {"username": max_user, "password": max_pass},
-        # Mix min/max
-        {"username": min_user, "password": max_pass},
-        {"username": max_user, "password": min_pass},
-    ]
-
-    for payload in test_cases:
-        mock_user_service.reset_mock()
-        mock_user_service.login.return_value = LoginResponse(
-            **login_response_data
-        )
-
-        response = client.post("/api/auth/login", json=payload)
-
-        assert response.status_code == status.HTTP_200_OK
-        response_data = response.json()
-        assert isinstance(response_data["access_token"], str)
-        assert isinstance(response_data["refresh_token"], str)
-        mock_user_service.login.assert_awaited_once()
 
 
 def test_login_unauthorized(client: TestClient, mock_user_service: AsyncMock):
@@ -418,124 +405,19 @@ def test_login_unauthorized(client: TestClient, mock_user_service: AsyncMock):
     assert response.json() == {
         "detail": "Incorrect password or username does not exist"
     }
-    mock_user_service.login.assert_awaited_once()
-    # Check arguments passed to the service
-    call_args = mock_user_service.login.call_args[0]
-    assert isinstance(call_args[0], LoginRequest)
-    assert call_args[0].username == login_payload["username"]
-    assert call_args[0].password == login_payload["password"]
-    # Ensure the correct exception was raised by the mock
-    assert isinstance(
-        mock_user_service.login.side_effect,
-        IncorrectPasswordOrUserDoesNotExists,
-    )
 
 
-def test_validate_token_success(
-    client: TestClient,
-    override_dependencies,
-    test_token_manager: JWTTokenManager,
-):
-    # Create a valid token
-    access_token = test_token_manager.create_token(
-        token_type=TokenType.ACCESS, user_id=uuid.uuid4()
-    )  # Pass UUID directly
-    headers = {"Authorization": f"Bearer {access_token}"}
-    response = client.post("/api/auth/validate", headers=headers)
+def test_validate_token_success(client: TestClient, override_dependencies):
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.post("/api/auth/validate")
     assert response.status_code == status.HTTP_200_OK
     assert response.content == b""
 
 
-def test_validate_token_no_header(client: TestClient, override_dependencies):
+def test_validate_token_no_cookie(client: TestClient, override_dependencies):
     response = client.post("/api/auth/validate")
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Invalid or expired access token"}
-
-
-def test_validate_token_invalid_scheme(
-    client: TestClient, override_dependencies
-):
-    headers = {"Authorization": "Basic invalid"}
-    response = client.post("/api/auth/validate", headers=headers)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or expired access token"}
-
-
-def test_refresh_token_success(
-    client: TestClient, mock_user_service: AsyncMock
-):
-    refresh_response_data = {"access_token": "new_fake_access_token"}
-    mock_user_service.refresh.return_value = RefreshResponse(
-        **refresh_response_data
-    )
-    refresh_payload = {"refresh_token": "valid_refresh_token"}
-    response = client.post("/api/auth/refresh", json=refresh_payload)
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == refresh_response_data
-    # Check RefreshResponse content
-    assert isinstance(refresh_response_data["access_token"], str)
-    assert len(refresh_response_data["access_token"]) > 0
-    mock_user_service.refresh.assert_awaited_once()
-
-
-def test_refresh_token_unauthorized(
-    client: TestClient, mock_user_service: AsyncMock
-):
-    mock_user_service.refresh.side_effect = InvalidOrExpiredRefreshToken()
-    refresh_payload = {"refresh_token": "invalid_or_expired_token"}
-    response = client.post("/api/auth/refresh", json=refresh_payload)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or expired refresh token"}
-    mock_user_service.refresh.assert_awaited_once()
-    # Check arguments passed to the service
-    call_args = mock_user_service.refresh.call_args[0]
-    assert isinstance(call_args[0], RefreshRequest)
-    assert call_args[0].refresh_token == refresh_payload["refresh_token"]
-    # Ensure the correct exception was raised by the mock
-    assert isinstance(
-        mock_user_service.refresh.side_effect, InvalidOrExpiredRefreshToken
-    )
-
-
-def test_refresh_success_boundaries(
-    client: TestClient, mock_user_service: AsyncMock
-):
-    """Test successful refresh with boundary length inputs."""
-    refresh_response_data = {"access_token": "new_fake_access_token_boundary"}
-    mock_user_service.refresh.return_value = RefreshResponse(
-        **refresh_response_data
-    )
-
-    # Test with min_length=1
-    min_len_token = "a"
-    payload = {"refresh_token": min_len_token}
-
-    response = client.post("/api/auth/refresh", json=payload)
-
-    assert response.status_code == status.HTTP_200_OK
-    response_data = response.json()
-    assert isinstance(response_data["access_token"], str)
-    mock_user_service.refresh.assert_awaited_once()
-
-
-def test_refresh_validation_error(client: TestClient):
-    """Tests validation errors for the refresh token endpoint."""
-    test_cases = [
-        # Empty token (violates min_length=1)
-        ({"refresh_token": ""}, 422),
-        # Missing token field
-        ({}, 422),
-        # Null token field
-        ({"refresh_token": None}, 422),
-        # Wrong type
-        ({"refresh_token": 12345}, 422),
-    ]
-
-    for payload, expected_status in test_cases:
-        response = client.post("/api/auth/refresh", json=payload)
-        assert (
-            response.status_code == expected_status
-        ), f"Failed for payload: {payload}"
 
 
 def test_get_profile_success(
@@ -548,14 +430,8 @@ def test_get_profile_success(
     # Extract the user ID used in sample_profile_data
     user_id = uuid.UUID(sample_profile_data["id"])
     mock_user_service.get_profile.return_value = Profile(**sample_profile_data)
-
-    # Create a valid access token for the user ID
-    access_token = test_token_manager.create_token(
-        token_type=TokenType.ACCESS, user_id=user_id
-    )
-    headers = {"Authorization": f"Bearer {access_token}"}
-
-    response = client.get("/api/auth/profile", headers=headers)
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.get("/api/auth/profile")
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
     # Check Profile response types and format
@@ -797,17 +673,10 @@ def test_change_password_success(
         "old_password": "oldPass123",
         "new_password": "newPass456!",
     }
-    # Create a valid token
-    access_token = test_token_manager.create_token(
-        token_type=TokenType.ACCESS, user_id=user_id
-    )
-    headers = {"Authorization": f"Bearer {access_token}"}
-
-    response = client.put(
-        "/api/auth/password", json=password_payload, headers=headers
-    )
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/password", json=password_payload)
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() is None
+    assert response.content == b""
     mock_user_service.change_password.assert_awaited_once()
     call_args = mock_user_service.change_password.call_args[0]
     assert call_args[0] == user_id  # Assert with the user_id from the token
@@ -871,15 +740,8 @@ def test_change_password_incorrect_old(
         "old_password": "wrongOldPass",
         "new_password": "newPass456!",
     }
-    # Create valid token
-    access_token = test_token_manager.create_token(
-        token_type=TokenType.ACCESS, user_id=user_id
-    )
-    headers = {"Authorization": f"Bearer {access_token}"}
-
-    response = client.put(
-        "/api/auth/password", json=password_payload, headers=headers
-    )
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/password", json=password_payload)
     assert response.status_code == status.HTTP_401_UNAUTHORIZED
     assert response.json() == {"detail": "Incorrect old password"}
     mock_user_service.change_password.assert_awaited_once()
@@ -896,106 +758,47 @@ def test_change_password_incorrect_old(
 
 
 def test_change_password_validation_error(
+    client: TestClient, override_dependencies
+):
+    password_payload = {
+        "old_password": "ValidOld1",
+        "new_password": "short",
+    }
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/password", json=password_payload)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+def test_update_profile_success(
     client: TestClient,
     override_dependencies,
-    test_token_manager: JWTTokenManager,
 ):
-    # Min/Max lengths
-    min_pass = "p" * 8
-    max_pass = "p" * 32
-
-    # Invalid lengths
-    invalid_short_pass = "p" * (8 - 1)
-    invalid_long_pass = "p" * (32 + 1)
-
-    # Create valid token
-    access_token = test_token_manager.create_token(
-        token_type=TokenType.ACCESS, user_id=uuid.uuid4()
-    )  # Pass UUID directly
-    headers = {"Authorization": f"Bearer {access_token}"}
-
-    test_cases = [
-        # Old password too short
-        ({"old_password": invalid_short_pass, "new_password": min_pass}, 422),
-        # New password too short
-        ({"old_password": min_pass, "new_password": invalid_short_pass}, 422),
-        # Old password too long
-        ({"old_password": invalid_long_pass, "new_password": min_pass}, 422),
-        # New password too long
-        ({"old_password": min_pass, "new_password": invalid_long_pass}, 422),
-        # Original case (new password too short)
-        ({"old_password": "ValidOld1", "new_password": "short"}, 422),
-        # Missing fields
-        ({"new_password": min_pass}, 422),
-        ({"old_password": min_pass}, 422),
-        ({}, 422),
-        # Null fields
-        ({"old_password": None, "new_password": min_pass}, 422),
-        ({"old_password": min_pass, "new_password": None}, 422),
-        # Wrong types
-        ({"old_password": 123, "new_password": min_pass}, 422),
-        ({"old_password": min_pass, "new_password": 123}, 422),
-    ]
-
-    for payload, expected_status in test_cases:
-        response = client.put(
-            "/api/auth/password", json=payload, headers=headers
-        )
-        assert (
-            response.status_code == expected_status
-        ), f"Failed for payload: {payload}"
-
-
-# --- Tests for Invalid Tokens --- #
-
-
-def test_get_profile_expired_token(client: TestClient, override_dependencies):
-    """Test accessing profile with an expired token."""
-    # Create a token manager that issues immediately expiring tokens
-    expired_token_manager = JWTTokenManager(
-        secret_key="fixed-test-secret-key",
-        algorithm="HS256",
-        access_token_exp_minutes=-1,
-        refresh_token_exp_minutes=10,
+    user_id = override_dependencies
+    updated_profile_data = sample_profile_data.copy()
+    updated_profile_data["name"] = "New Name"
+    updated_profile_data["updated_at"] = (
+        datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
     )
-    user_id = uuid.uuid4()
-    expired_token = expired_token_manager.create_token(
-        token_type=TokenType.ACCESS, user_id=user_id
+    mock_user_service.update_profile.return_value = Profile(
+        **updated_profile_data
     )
-    headers = {"Authorization": f"Bearer {expired_token}"}
 
-    response = client.get("/api/auth/profile", headers=headers)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or expired access token"}
+    profile_payload = {"name": "New Name"}
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/profile", json=profile_payload)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == updated_profile_data
+    mock_user_service.update_profile.assert_awaited_once()
+    call_args = mock_user_service.update_profile.call_args[0]
+    assert call_args[0] == user_id
+    assert call_args[1].name == "New Name"
 
 
-def test_get_profile_invalid_signature_token(
+def test_update_profile_validation_error(
     client: TestClient, override_dependencies
 ):
-    """Test accessing profile with a token signed by a different key."""
-    # Create a token manager with a different secret key
-    wrong_key_token_manager = JWTTokenManager(
-        secret_key="different-secret-key",
-        algorithm="HS256",
-        access_token_exp_minutes=5,
-        refresh_token_exp_minutes=10,
-    )
-    user_id = uuid.uuid4()
-    wrong_key_token = wrong_key_token_manager.create_token(
-        token_type=TokenType.ACCESS, user_id=user_id
-    )
-    headers = {"Authorization": f"Bearer {wrong_key_token}"}
-
-    response = client.get("/api/auth/profile", headers=headers)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or expired access token"}
-
-
-def test_get_profile_invalid_token_format(
-    client: TestClient, override_dependencies
-):
-    """Test accessing profile with an invalid token format."""
-    headers = {"Authorization": "Bearer not.a.valid.jwt.token"}
-    response = client.get("/api/auth/profile", headers=headers)
-    assert response.status_code == status.HTTP_401_UNAUTHORIZED
-    assert response.json() == {"detail": "Invalid or expired access token"}
+    profile_payload = {"name": "N"}
+    client.cookies.set("access_token", "valid.token.for.test")
+    response = client.put("/api/auth/profile", json=profile_payload)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

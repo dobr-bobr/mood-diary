@@ -1,7 +1,7 @@
 import sqlite3
 from uuid import UUID
 
-from fastapi import Header, Depends
+from fastapi import Depends, Cookie
 
 from mood_diary.backend.config import config
 from mood_diary.backend.exceptions.user import InvalidOrExpiredAccessToken
@@ -18,7 +18,6 @@ from mood_diary.backend.utils.password_hasher import (
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
     TokenManager,
-    TokenType,
 )
 
 
@@ -27,7 +26,6 @@ def get_token_manager() -> TokenManager:
         config.AUTH_TOKEN_SECRET_KEY,
         config.AUTH_TOKEN_ALGORITHM,
         config.AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES,
-        config.AUTH_TOKEN_REFRESH_TOKEN_EXPIRE_MINUTES,
     )
 
 
@@ -42,16 +40,15 @@ def get_password_hasher() -> PasswordHasher:
 
 
 def get_current_user_id(
-    authorization: str | None = Header(None),
+    access_token: str | None = Cookie(None),
     token_manager: TokenManager = Depends(get_token_manager),
 ) -> UUID:
-    if not authorization or not authorization.startswith("Bearer "):
+    if not access_token:
         raise InvalidOrExpiredAccessToken()
 
-    token = authorization.removeprefix("Bearer ").strip()
-    payload = token_manager.decode_token(token)
+    payload = token_manager.decode_token(access_token)
 
-    if payload is None or payload.type != TokenType.ACCESS:
+    if payload is None:
         raise InvalidOrExpiredAccessToken()
 
     return payload.user_id
