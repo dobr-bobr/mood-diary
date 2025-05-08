@@ -8,7 +8,10 @@ from mood_diary.frontend.shared.api import api
 @pytest.fixture
 def mock_session():
     session = MagicMock()
-    with patch("mood_diary.frontend.shared.api.api.provide_requests_session", return_value=session):
+    with patch(
+        "mood_diary.frontend.shared.api.api.provide_requests_session",
+        return_value=session,
+    ):
         yield session
 
 
@@ -44,13 +47,17 @@ def test_fetch_change_password_success(mock_session, mock_streamlit):
     mock_session.put.return_value.status_code = 200
 
     api.fetch_change_password("oldpass", "newpass")
-    mock_streamlit.info.assert_called_once_with("Password successfully changed")
+    mock_streamlit.info.assert_called_once_with(
+        "Password successfully changed"
+    )
     mock_streamlit.switch_page.assert_called_once_with("main.py")
 
 
 def test_fetch_all_mood_success(mock_session, mock_streamlit):
     mock_session.get.return_value.status_code = 200
-    mock_session.get.return_value.json.return_value = [{"date": "2024-01-01", "value": 3}]
+    mock_session.get.return_value.json.return_value = [
+        {"date": "2024-01-01", "value": 3}
+    ]
 
     result = api.fetch_all_mood()
     assert result == [{"date": "2024-01-01", "value": 3}]
@@ -66,7 +73,9 @@ def test_fetch_create_mood_success(mock_session, mock_streamlit):
 
 def test_fetch_create_mood_duplicate(mock_session, mock_streamlit):
     mock_session.post.return_value.status_code = 400
-    mock_session.post.return_value.json.return_value = {"detail": "Already exists"}
+    mock_session.post.return_value.json.return_value = {
+        "detail": "Already exists"
+    }
 
     result = api.fetch_create_mood(date.today(), 3, "note")
     assert result is False
@@ -83,7 +92,10 @@ def test_fetch_delete_mood_success(mock_session, mock_streamlit):
 
 def test_fetch_edit_mood_success(mock_session, mock_streamlit):
     mock_session.put.return_value.status_code = 200
-    mock_session.put.return_value.json.return_value = {"date": "2024-01-01", "value": 2}
+    mock_session.put.return_value.json.return_value = {
+        "date": "2024-01-01",
+        "value": 2,
+    }
 
     result = api.fetch_edit_mood("2024-01-01", value=2)
     assert result["value"] == 2
@@ -106,7 +118,9 @@ def test_fetch_profile_exception(mock_session, mock_streamlit):
 def test_fetch_change_name_unauthorized(mock_session, mock_streamlit):
     mock_session.put.return_value.status_code = 401
     api.fetch_change_name("AnotherName")
-    mock_streamlit.switch_page.assert_called_once_with("pages/authorization.py")
+    mock_streamlit.switch_page.assert_called_once_with(
+        "pages/authorization.py"
+    )
 
 
 def test_fetch_change_name_server_error(mock_session, mock_streamlit):
@@ -119,7 +133,9 @@ def test_fetch_change_name_server_error(mock_session, mock_streamlit):
 def test_fetch_change_password_unauthorized(mock_session, mock_streamlit):
     mock_session.put.return_value.status_code = 401
     api.fetch_change_password("wrong", "new")
-    mock_streamlit.switch_page.assert_called_once_with("pages/authorization.py")
+    mock_streamlit.switch_page.assert_called_once_with(
+        "pages/authorization.py"
+    )
 
 
 def test_fetch_change_password_server_error(mock_session, mock_streamlit):
@@ -133,7 +149,9 @@ def test_fetch_change_password_server_error(mock_session, mock_streamlit):
 def test_fetch_all_mood_unauthorized(mock_session, mock_streamlit):
     mock_session.get.return_value.status_code = 401
     api.fetch_all_mood()
-    mock_streamlit.switch_page.assert_called_once_with("pages/authorization.py")
+    mock_streamlit.switch_page.assert_called_once_with(
+        "pages/authorization.py"
+    )
 
 
 def test_fetch_all_mood_server_error(mock_session, mock_streamlit):
@@ -146,7 +164,9 @@ def test_fetch_all_mood_server_error(mock_session, mock_streamlit):
 def test_fetch_create_mood_unauthorized(mock_session, mock_streamlit):
     mock_session.post.return_value.status_code = 401
     api.fetch_create_mood(date.today(), 3, "test")
-    mock_streamlit.switch_page.assert_called_once_with("pages/authorization.py")
+    mock_streamlit.switch_page.assert_called_once_with(
+        "pages/authorization.py"
+    )
 
 
 def test_fetch_create_mood_server_error(mock_session, mock_streamlit):
@@ -160,7 +180,9 @@ def test_fetch_create_mood_server_error(mock_session, mock_streamlit):
 def test_fetch_delete_mood_unauthorized(mock_session, mock_streamlit):
     mock_session.delete.return_value.status_code = 401
     api.fetch_delete_mood("2024-01-01")
-    mock_streamlit.switch_page.assert_called_once_with("pages/authorization.py")
+    mock_streamlit.switch_page.assert_called_once_with(
+        "pages/authorization.py"
+    )
 
 
 def test_fetch_delete_mood_server_error(mock_session, mock_streamlit):
@@ -173,11 +195,83 @@ def test_fetch_delete_mood_server_error(mock_session, mock_streamlit):
 def test_fetch_edit_mood_unauthorized(mock_session, mock_streamlit):
     mock_session.put.return_value.status_code = 401
     api.fetch_edit_mood("2024-01-01", value=1)
-    mock_streamlit.switch_page.assert_called_once_with("pages/authorization.py")
+    mock_streamlit.switch_page.assert_called_once_with(
+        "pages/authorization.py"
+    )
 
 
 def test_fetch_edit_mood_server_error(mock_session, mock_streamlit):
     mock_session.put.return_value.status_code = 500
     api.fetch_edit_mood("2024-01-01", note="updated")
     mock_streamlit.error.assert_called_once()
+    mock_streamlit.stop.assert_called_once()
+
+
+def test_fetch_mood_by_date_success(mock_session, mock_streamlit):
+    mock_session.get.return_value.status_code = 200
+    mock_session.get.return_value.json.return_value = {
+        "date": "2024-01-01",
+        "value": 5,
+    }
+    result = api.fetch_mood_by_date("2024-01-01")
+    assert result == {"date": "2024-01-01", "value": 5}
+
+
+def test_fetch_mood_by_date_not_found(mock_session, mock_streamlit):
+    mock_session.get.return_value.status_code = 404
+    result = api.fetch_mood_by_date("2024-01-02")
+    mock_streamlit.info.assert_called_once_with("No mood entry for this day.")
+    assert result is None
+
+
+def test_fetch_mood_by_date_unauthorized(mock_session, mock_streamlit):
+    mock_session.get.return_value.status_code = 401
+    api.fetch_mood_by_date("2024-01-03")
+    mock_streamlit.switch_page.assert_called_once_with(
+        "pages/authorization.py"
+    )
+
+
+def test_fetch_mood_by_date_server_error(mock_session, mock_streamlit):
+    mock_session.get.return_value.status_code = 500
+    api.fetch_mood_by_date("2024-01-04")
+    mock_streamlit.error.assert_called_once_with(
+        "Failed to get user mood: 500"
+    )
+    mock_streamlit.stop.assert_called_once()
+
+
+def test_fetch_mood_by_date_exception(mock_session, mock_streamlit):
+    mock_session.get.side_effect = Exception("Network error")
+    api.fetch_mood_by_date("2024-01-05")
+    mock_streamlit.error.assert_called_once()
+    assert "Error fetching mood" in mock_streamlit.error.call_args[0][0]
+    mock_streamlit.stop.assert_called_once()
+
+
+def test_fetch_create_mood_400_no_detail(mock_session, mock_streamlit):
+    mock_session.post.return_value.status_code = 400
+    mock_session.post.return_value.json.return_value = {}
+    result = api.fetch_create_mood(date.today(), 3, "note")
+    assert result is False
+    mock_streamlit.warning.assert_called_once_with(
+        "Mood for this date already exists"
+    )
+
+
+def test_fetch_delete_mood_not_found(mock_session, mock_streamlit):
+    mock_session.delete.return_value.status_code = 404
+    api.fetch_delete_mood("2024-01-06")
+    mock_streamlit.error.assert_called_once_with(
+        "Failed to delete user mood: 404"
+    )
+    mock_streamlit.stop.assert_called_once()
+
+
+def test_fetch_edit_mood_server_error_with_code(mock_session, mock_streamlit):
+    mock_session.put.return_value.status_code = 400
+    api.fetch_edit_mood("2024-01-07", value=3)
+    mock_streamlit.error.assert_called_once_with(
+        "Failed to edit user mood: 400"
+    )
     mock_streamlit.stop.assert_called_once()
