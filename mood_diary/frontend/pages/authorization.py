@@ -11,7 +11,7 @@ st.set_page_config(
 
 
 def clear_user_data():
-    preserved_keys = ["username", "password", "access_token"]
+    preserved_keys = ["username", "password"]
 
     all_keys = list(st.session_state.keys())
 
