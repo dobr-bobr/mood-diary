@@ -63,6 +63,25 @@ def fetch_change_password(old_password, new_password):
         st.stop()
 
 
+def fetch_mood_by_date(date):
+    try:
+        session = provide_requests_session()
+        response = session.get(f"{BASE_URL}/mood/{date}")
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 404:
+            st.info("No mood entry for this day.")
+            return None
+        elif response.status_code == 401:
+            st.switch_page("pages/authorization.py")
+        else:
+            st.error(f"Failed to get user mood: {response.status_code}")
+            st.stop()
+    except Exception as e:
+        st.error(f"Error fetching mood: {e}")
+        st.stop()
+
+
 def fetch_all_mood(start_date=None, end_date=None, value=None):
     try:
         session = provide_requests_session()
