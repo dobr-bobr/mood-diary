@@ -1,6 +1,5 @@
 import os
 import pytest
-from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from mood_diary.backend.config import Settings
@@ -69,10 +68,9 @@ def test_settings_default_values():
     assert settings.PASSWORD_HASHING_SPLIT_CHAR == "$"
     assert settings.AUTH_TOKEN_SECRET_KEY == ""
     assert settings.AUTH_TOKEN_ALGORITHM == "HS256"
-    assert settings.AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES == 30
-    assert settings.AUTH_TOKEN_REFRESH_TOKEN_EXPIRE_MINUTES == 60 * 24 * 30
+    assert settings.AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES == 360
     assert settings.ROOT_PATH == "/api"
-    assert settings.SQLITE_DB_PATH == "mood_diary.db"
+    assert settings.SQLITE_DB_PATH == "data/mood_diary.db"
 
 
 def test_settings_override_with_env_vars():

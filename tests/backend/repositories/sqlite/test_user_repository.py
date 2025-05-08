@@ -1,7 +1,7 @@
 import sqlite3
 import uuid
 from datetime import datetime, timezone
-from unittest.mock import ANY, AsyncMock, MagicMock, patch, Mock
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -11,10 +11,6 @@ from mood_diary.backend.repositories.sсhemas.user import (
     UpdateUserHashedPassword,
     UpdateUserProfile,
     User,
-)
-from tests.backend.repositories.sqlite.base_fixtures import (
-    mock_connection,
-    mock_cursor,
 )
 
 
@@ -198,21 +194,41 @@ async def test_create_user_success(
         hashed_password="new_hashed_password",
     )
     repo = SQLiteUserRepository(mock_connection)
-    repo.get_by_username = AsyncMock(return_value=sample_user_schema)
+    expected_user = sample_user_schema.model_copy(
+        update={
+            "id": sample_user_schema.id,
+            "username": create_data.username,
+            "name": create_data.name,
+            "hashed_password": create_data.hashed_password,
+            "created_at": datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            "updated_at": datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc),
+            "password_updated_at": datetime(
+                2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc
+            ),
+        }
+    )
+    repo.get_by_username = AsyncMock(return_value=expected_user)
 
     fixed_time = datetime(2024, 1, 1, 12, 0, 0, tzinfo=timezone.utc)
+    test_uuid = uuid.uuid4()
 
     with patch(
         "mood_diary.backend.repositories.sqlite.user.uuid4",
-        return_value=sample_user_schema.id,
-    ):
-        created_user = await repo.create(create_data)
+        return_value=test_uuid,
+    ) as mock_uuid:
+        with patch(
+            "mood_diary.backend.repositories.sqlite.user.datetime"
+        ) as mock_dt:
+            mock_dt.now.return_value = fixed_time
+            expected_user.id = test_uuid
+
+            created_user = await repo.create(create_data)
 
     mock_connection.cursor.assert_called_once()
     mock_cursor.execute.assert_called_once_with(
         ANY,
         (
-            str(sample_user_schema.id),
+            str(test_uuid),
             create_data.username,
             create_data.name,
             create_data.hashed_password,
@@ -224,7 +240,7 @@ async def test_create_user_success(
     assert "INSERT INTO users" in mock_cursor.execute.call_args[0][0]
     mock_connection.commit.assert_called_once()
     repo.get_by_username.assert_awaited_once_with(create_data.username)
-    assert created_user == sample_user_schema
+    assert created_user == expected_user
 
 
 @pytest.mark.asyncio

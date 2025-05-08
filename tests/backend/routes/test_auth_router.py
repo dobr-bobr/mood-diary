@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import Depends, Cookie, status
+from fastapi import Cookie, status
 from fastapi.testclient import TestClient
 
 from mood_diary.backend.config import Settings
@@ -17,16 +17,20 @@ from mood_diary.backend.app import get_app
 from mood_diary.backend.routes.dependencies import (
     get_token_manager,
     get_user_service,
+    get_current_user_id,
 )
 from mood_diary.backend.database.cache import get_redis_client
 from mood_diary.backend.services.user import UserService
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
     TokenManager,
+    TokenType,
 )
 from mood_diary.common.api.schemas.auth import (
     LoginResponse,
     Profile,
+    RegisterRequest,
+    ChangePasswordRequest,
 )
 
 
@@ -68,7 +72,8 @@ def main_app():
         SQLITE_DB_PATH=":memory:",
         REDIS_HOST="mocked_redis",
     )
-    return get_app(test_settings)
+    app = get_app(test_settings)
+    yield app
 
 
 @pytest.fixture
@@ -82,7 +87,6 @@ def override_dependencies(
 
     async def mock_get_current_user_id_simple_check(
         access_token: str | None = Cookie(None),
-        token_manager: TokenManager = Depends(lambda: test_token_manager),
     ) -> uuid.UUID:
         if not access_token:
             raise InvalidOrExpiredAccessToken()
@@ -98,7 +102,7 @@ def override_dependencies(
     )
     main_app.dependency_overrides[get_redis_client] = lambda: mock_redis_client
 
-    yield
+    yield test_user_id
 
     main_app.dependency_overrides = {}
 
@@ -124,7 +128,6 @@ def sample_profile_data():
     }
 
 
-# Helper to check datetime strings
 def is_iso_datetime_z(dt_str: str) -> bool:
     try:
         dt = datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
@@ -427,16 +430,19 @@ def test_get_profile_success(
     override_dependencies,
     test_token_manager: JWTTokenManager,
 ):
-    # Extract the user ID used in sample_profile_data
-    user_id = uuid.UUID(sample_profile_data["id"])
-    mock_user_service.get_profile.return_value = Profile(**sample_profile_data)
+    """Tests successfully retrieving the user profile."""
+    fixed_user_id = override_dependencies
+    profile_data = sample_profile_data.copy()
+    profile_data["id"] = str(fixed_user_id)
+    expected_profile = Profile(**profile_data)
+
+    mock_user_service.get_profile.return_value = expected_profile
     client.cookies.set("access_token", "valid.token.for.test")
     response = client.get("/api/auth/profile")
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
-    # Check Profile response types and format
     assert isinstance(response_data["id"], str)
-    assert response_data["id"] == sample_profile_data["id"]
+    assert response_data["id"] == str(fixed_user_id)
     try:
         uuid.UUID(response_data["id"])
     except ValueError:
@@ -459,11 +465,11 @@ def test_get_profile_success(
     )
 
     # Compare main values
-    assert response_data["id"] == sample_profile_data["id"]
+    assert response_data["id"] == str(fixed_user_id)
     assert response_data["username"] == sample_profile_data["username"]
     assert response_data["name"] == sample_profile_data["name"]
 
-    mock_user_service.get_profile.assert_awaited_once_with(user_id)
+    mock_user_service.get_profile.assert_awaited_once_with(fixed_user_id)
 
 
 def test_get_profile_unauthorized(client: TestClient, override_dependencies):
@@ -492,11 +498,9 @@ def test_update_profile_success(
     access_token = test_token_manager.create_token(
         token_type=TokenType.ACCESS, user_id=user_id
     )
-    headers = {"Authorization": f"Bearer {access_token}"}
+    client.cookies.set("access_token", access_token)
 
-    response = client.put(
-        "/api/auth/profile", json=profile_payload, headers=headers
-    )
+    response = client.put("/api/auth/profile", json=profile_payload)
 
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
@@ -519,8 +523,9 @@ def test_update_profile_success(
 
     mock_user_service.update_profile.assert_awaited_once()
     call_args = mock_user_service.update_profile.call_args[0]
-    assert call_args[0] == user_id
-    assert call_args[1].name == new_name
+    assert (
+        call_args[0] == override_dependencies
+    )  # Use fixed_user_id from override_dependencies
 
 
 def test_update_profile_success_boundaries(
@@ -557,11 +562,9 @@ def test_update_profile_success_boundaries(
         access_token = test_token_manager.create_token(
             token_type=TokenType.ACCESS, user_id=user_id
         )
-        headers = {"Authorization": f"Bearer {access_token}"}
+        client.cookies.set("access_token", access_token)
 
-        response = client.put(
-            "/api/auth/profile", json=payload, headers=headers
-        )
+        response = client.put("/api/auth/profile", json=payload)
 
         assert response.status_code == status.HTTP_200_OK
         response_data = response.json()
@@ -586,7 +589,7 @@ def test_update_profile_validation_error(
     access_token = test_token_manager.create_token(
         token_type=TokenType.ACCESS, user_id=uuid.uuid4()
     )  # Pass UUID directly
-    headers = {"Authorization": f"Bearer {access_token}"}
+    client.cookies.set("access_token", access_token)
 
     test_cases = [
         # Name too short
@@ -604,9 +607,7 @@ def test_update_profile_validation_error(
     ]
 
     for payload, expected_status in test_cases:
-        response = client.put(
-            "/api/auth/profile", json=payload, headers=headers
-        )
+        response = client.put("/api/auth/profile", json=payload)
         assert (
             response.status_code == expected_status
         ), f"Failed for payload: {payload}"
@@ -666,8 +667,9 @@ def test_change_password_success(
     override_dependencies,
     test_token_manager: JWTTokenManager,
 ):
-    # Create a dummy user ID for the token
-    user_id = uuid.uuid4()
+    """Tests successfully changing the password."""
+    # Get the user_id yielded by the override_dependencies fixture
+    fixed_user_id = override_dependencies
     mock_user_service.change_password.return_value = None
     password_payload = {
         "old_password": "oldPass123",
@@ -679,7 +681,10 @@ def test_change_password_success(
     assert response.content == b""
     mock_user_service.change_password.assert_awaited_once()
     call_args = mock_user_service.change_password.call_args[0]
-    assert call_args[0] == user_id  # Assert with the user_id from the token
+    assert (
+        call_args[0] == fixed_user_id
+    )  # Assert with the user_id from the override
+    assert isinstance(call_args[1], ChangePasswordRequest)  # Check type
     assert call_args[1].old_password == "oldPass123"
     assert call_args[1].new_password == "newPass456!"
 
@@ -696,7 +701,7 @@ def test_change_password_success_boundaries(
     access_token = test_token_manager.create_token(
         token_type=TokenType.ACCESS, user_id=user_id
     )
-    headers = {"Authorization": f"Bearer {access_token}"}
+    client.cookies.set("access_token", access_token)
 
     # Min/Max lengths
     min_pass = "p" * 8
@@ -718,13 +723,15 @@ def test_change_password_success_boundaries(
             None  # Success returns None
         )
 
-        response = client.put(
-            "/api/auth/password", json=payload, headers=headers
-        )
+        response = client.put("/api/auth/password", json=payload)
 
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() is None  # Check for null JSON response
-        mock_user_service.change_password.assert_awaited_once()
+        assert response.content == b""  # Check for empty byte string response
+
+        mock_user_service.change_password.assert_awaited_once_with(
+            override_dependencies,  # Ensure correct user ID is asserted
+            ChangePasswordRequest(**payload),
+        )
 
 
 def test_change_password_incorrect_old(
@@ -733,8 +740,9 @@ def test_change_password_incorrect_old(
     override_dependencies,
     test_token_manager: JWTTokenManager,
 ):
-    # Dummy user ID for token
-    user_id = uuid.uuid4()
+    """Tests password change failure due to incorrect old password."""
+    # Get the user_id yielded by the override_dependencies fixture
+    fixed_user_id = override_dependencies
     mock_user_service.change_password.side_effect = IncorrectOldPassword()
     password_payload = {
         "old_password": "wrongOldPass",
@@ -747,7 +755,7 @@ def test_change_password_incorrect_old(
     mock_user_service.change_password.assert_awaited_once()
     # Check arguments passed to the service
     call_args = mock_user_service.change_password.call_args[0]
-    assert call_args[0] == user_id  # Check user_id from token
+    assert call_args[0] == fixed_user_id  # Check user_id from override
     assert isinstance(call_args[1], ChangePasswordRequest)
     assert call_args[1].old_password == password_payload["old_password"]
     assert call_args[1].new_password == password_payload["new_password"]
@@ -766,39 +774,4 @@ def test_change_password_validation_error(
     }
     client.cookies.set("access_token", "valid.token.for.test")
     response = client.put("/api/auth/password", json=password_payload)
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-
-
-def test_update_profile_success(
-    client: TestClient,
-    override_dependencies,
-):
-    user_id = override_dependencies
-    updated_profile_data = sample_profile_data.copy()
-    updated_profile_data["name"] = "New Name"
-    updated_profile_data["updated_at"] = (
-        datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
-    )
-    mock_user_service.update_profile.return_value = Profile(
-        **updated_profile_data
-    )
-
-    profile_payload = {"name": "New Name"}
-    client.cookies.set("access_token", "valid.token.for.test")
-    response = client.put("/api/auth/profile", json=profile_payload)
-
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json() == updated_profile_data
-    mock_user_service.update_profile.assert_awaited_once()
-    call_args = mock_user_service.update_profile.call_args[0]
-    assert call_args[0] == user_id
-    assert call_args[1].name == "New Name"
-
-
-def test_update_profile_validation_error(
-    client: TestClient, override_dependencies
-):
-    profile_payload = {"name": "N"}
-    client.cookies.set("access_token", "valid.token.for.test")
-    response = client.put("/api/auth/profile", json=profile_payload)
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY

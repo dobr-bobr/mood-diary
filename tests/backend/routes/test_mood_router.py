@@ -25,9 +25,6 @@ from mood_diary.common.api.schemas.mood import (
     MoodStampSchema,
 )
 
-from mood_diary.backend.app import get_app
-from mood_diary.backend.config import Settings
-
 from mood_diary.backend.routes.mood import router as mood_router
 
 
@@ -66,7 +63,7 @@ def main_app_mood(
     test_user_id: uuid.UUID,
     mock_mood_service: AsyncMock,
     mock_redis_client: AsyncMock,
-) -> FastAPI:
+) -> Generator[FastAPI, None, None]:
     app = FastAPI()
     app.include_router(mood_router, prefix="/api/moods", tags=["moods"])
 
@@ -89,13 +86,11 @@ def main_app_mood(
     app.dependency_overrides[get_mood_service] = override_get_mood_service
     app.dependency_overrides[get_redis_client] = override_get_redis_client
 
-    yield  # Allow tests to run with overrides
+    yield app
 
-    # Clean up overrides after tests
-    main_app.dependency_overrides = {}
+    app.dependency_overrides = {}
 
 
-# Updated client fixture
 @pytest.fixture
 def client_mood(main_app_mood: FastAPI) -> Generator[TestClient, None, None]:
     with TestClient(main_app_mood) as client:
@@ -329,15 +324,17 @@ def test_update_moodstamp_not_found(
 )
 def test_update_moodstamp_validation_error(
     client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
+    payload: dict,
+    expected_detail_contains: str,
 ):
     """Tests validation errors for updating moodstamps."""
     test_date = date.today()
     test_date_str = test_date.isoformat()
 
     client_mood.cookies.set("access_token", "fake-test-token")
-    response = client_mood.put(
-        f"/api/moods/{test_date_str}", json=invalid_payload
-    )
+    response = client_mood.put(f"/api/moods/{test_date_str}", json=payload)
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     details = response.json().get("detail", [])
