@@ -7,16 +7,16 @@ from fastapi import APIRouter, Response, Depends, status
 from fastapi_csrf_protect import CsrfProtect
 
 from mood_diary.backend.routes.dependencies import (
-	get_current_user_id,
-	get_user_service,
+    get_current_user_id,
+    get_user_service,
 )
 from mood_diary.backend.services.user import UserService
 from mood_diary.common.api.schemas.auth import (
-	RegisterRequest,
-	Profile,
-	LoginRequest,
-	ChangePasswordRequest,
-	ChangeProfileRequest,
+    RegisterRequest,
+    Profile,
+    LoginRequest,
+    ChangePasswordRequest,
+    ChangeProfileRequest,
 )
 from mood_diary.common.api.schemas.token import TokenWithCSRF
 from mood_diary.common.api.schemas.common import MessageResponse
@@ -30,29 +30,29 @@ router = APIRouter()
 
 
 @router.post(
-	"/register",
-	response_model=Profile,
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {
-			"model": Profile,
-			"description": "User registered successfully",
-		},
-		400: {
-			"model": MessageResponse,
-			"description": "Username already exists",
-			"content": {
-				"application/json": {
-					"example": {"message": "Username already exists"}
-				}
-			},
-		},
-	},
+    "/register",
+    response_model=Profile,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": Profile,
+            "description": "User registered successfully",
+        },
+        400: {
+            "model": MessageResponse,
+            "description": "Username already exists",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Username already exists"}
+                }
+            },
+        },
+    },
 )
 async def register(
-		request: RegisterRequest,
-		service: UserService = Depends(get_user_service),
-		csrf_protect: CsrfProtect = Depends()
+    request: RegisterRequest,
+    service: UserService = Depends(get_user_service),
+    csrf_protect: CsrfProtect = Depends(),
 ):
     logger.info(f"Attempting registration for username: {request.username}")
     try:
@@ -70,34 +70,34 @@ async def register(
 
 
 @router.post(
-	"/login",
-	response_model=TokenWithCSRF,
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {
-			"model": TokenWithCSRF,
-			"description": "User logged in successfully",
-		},
-		status.HTTP_401_UNAUTHORIZED: {
-			"model": MessageResponse,
-			"description": "Incorrect password or username does not exist",
-			"content": {
-				"application/json": {
-					"example": {
-						"message": (
-								"Incorrect password or username does not exist"
-						)
-					}
-				}
-			},
-		},
-	},
+    "/login",
+    response_model=TokenWithCSRF,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": TokenWithCSRF,
+            "description": "User logged in successfully",
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": MessageResponse,
+            "description": "Incorrect password or username does not exist",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": (
+                            "Incorrect password or username does not exist"
+                        )
+                    }
+                }
+            },
+        },
+    },
 )
 async def login(
-		fastapi_response: Response,
-		request: LoginRequest,
-		service: UserService = Depends(get_user_service),
-		csrf_protect: CsrfProtect = Depends()
+    fastapi_response: Response,
+    request: LoginRequest,
+    service: UserService = Depends(get_user_service),
+    csrf_protect: CsrfProtect = Depends(),
 ):
     logger.info(f"Login attempt for username: {request.username}")
     try:
@@ -118,20 +118,20 @@ async def login(
 
 
 @router.post(
-	"/validate",
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {"description": "Token is valid"},
-		status.HTTP_401_UNAUTHORIZED: {
-			"model": MessageResponse,
-			"description": "Invalid or expired token",
-			"content": {
-				"application/json": {
-					"example": {"message": "Invalid or expired token"}
-				}
-			},
-		},
-	},
+    "/validate",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {"description": "Token is valid"},
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": MessageResponse,
+            "description": "Invalid or expired token",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Invalid or expired token"}
+                }
+            },
+        },
+    },
 )
 async def validate_token(user_id: UUID = Depends(get_current_user_id)):
     logger.info(f"Token validation attempt for User ID: {user_id}")
@@ -140,24 +140,24 @@ async def validate_token(user_id: UUID = Depends(get_current_user_id)):
 
 
 @router.get(
-	"/profile",
-	response_model=Profile,
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {
-			"model": Profile,
-			"description": "User profile retrieved successfully",
-		},
-		status.HTTP_401_UNAUTHORIZED: {
-			"model": MessageResponse,
-			"description": "Invalid or expired token",
-			"content": {
-				"application/json": {
-					"example": {"message": "Invalid or expired token"}
-				}
-			},
-		},
-	},
+    "/profile",
+    response_model=Profile,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": Profile,
+            "description": "User profile retrieved successfully",
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": MessageResponse,
+            "description": "Invalid or expired token",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Invalid or expired token"}
+                }
+            },
+        },
+    },
 )
 async def get_profile(
     user_id: UUID = Depends(get_current_user_id),
@@ -182,29 +182,29 @@ async def get_profile(
 
 
 @router.put(
-	"/password",
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {"description": "Password changed successfully"},
-		status.HTTP_400_BAD_REQUEST: {
-			"model": MessageResponse,
-			"description": "Incorrect old password",
-			"content": {
-				"application/json": {
-					"example": {"message": "Incorrect old password"}
-				}
-			},
-		},
-		status.HTTP_401_UNAUTHORIZED: {
-			"model": MessageResponse,
-			"description": "Invalid or expired token",
-			"content": {
-				"application/json": {
-					"example": {"message": "Invalid or expired token"}
-				}
-			},
-		},
-	},
+    "/password",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {"description": "Password changed successfully"},
+        status.HTTP_400_BAD_REQUEST: {
+            "model": MessageResponse,
+            "description": "Incorrect old password",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Incorrect old password"}
+                }
+            },
+        },
+        status.HTTP_401_UNAUTHORIZED: {
+            "model": MessageResponse,
+            "description": "Invalid or expired token",
+            "content": {
+                "application/json": {
+                    "example": {"message": "Invalid or expired token"}
+                }
+            },
+        },
+    },
 )
 async def change_password(
     request: ChangePasswordRequest,
@@ -228,15 +228,15 @@ async def change_password(
 
 
 @router.put(
-	"/profile",
-	response_model=Profile,
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {
-			"model": Profile,
-			"description": "User profile updated successfully",
-		}
-	},
+    "/profile",
+    response_model=Profile,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": Profile,
+            "description": "User profile updated successfully",
+        }
+    },
 )
 async def update_profile(
     request: ChangeProfileRequest,

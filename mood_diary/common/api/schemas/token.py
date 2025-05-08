@@ -4,8 +4,8 @@ from mood_diary.common.api.schemas.auth import LoginResponse
 
 
 class TokenData(BaseModel):
-	username: str | None = None
+    username: str | None = None
 
 
 class TokenWithCSRF(LoginResponse):
-	csrf_token: str
+    csrf_token: str

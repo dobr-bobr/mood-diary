@@ -8,15 +8,15 @@ import redis.asyncio as aioredis
 
 from mood_diary.backend.config import config
 from mood_diary.backend.routes.dependencies import (
-	get_mood_service,
-	get_current_user_id,
+    get_mood_service,
+    get_current_user_id,
 )
 from mood_diary.backend.services.mood import MoodService
 from mood_diary.common.api.schemas.mood import (
-	CreateMoodStampRequest,
-	GetManyMoodStampsRequest,
-	UpdateMoodStampRequest,
-	MoodStampSchema,
+    CreateMoodStampRequest,
+    GetManyMoodStampsRequest,
+    UpdateMoodStampRequest,
+    MoodStampSchema,
 )
 from mood_diary.common.api.schemas.common import MessageResponse
 from mood_diary.backend.config import config
@@ -28,24 +28,24 @@ router = APIRouter()
 
 
 @router.post(
-	"/",
-	response_model=MoodStampSchema,
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {
-			"model": MoodStampSchema,
-			"description": "MoodStamp recorded successfully",
-		},
-		status.HTTP_400_BAD_REQUEST: {
-			"model": MessageResponse,
-			"description": "MoodStamp already exists",
-			"content": {
-				"application/json": {
-					"example": {"message": "MoodStamp already exists"}
-				}
-			},
-		},
-	},
+    "/",
+    response_model=MoodStampSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": MoodStampSchema,
+            "description": "MoodStamp recorded successfully",
+        },
+        status.HTTP_400_BAD_REQUEST: {
+            "model": MessageResponse,
+            "description": "MoodStamp already exists",
+            "content": {
+                "application/json": {
+                    "example": {"message": "MoodStamp already exists"}
+                }
+            },
+        },
+    },
 )
 async def create(
     request: CreateMoodStampRequest,
@@ -82,40 +82,38 @@ async def create(
 
 
 @router.get(
-	"/csrf-token",
-	status_code=status.HTTP_200_OK,
+    "/csrf-token",
+    status_code=status.HTTP_200_OK,
 )
 async def get_csrf_token(
-		fastapi_request: Request,
-		csrf_protect: CsrfProtect = Depends()
+    fastapi_request: Request, csrf_protect: CsrfProtect = Depends()
 ):
-	response = Response(status_code=status.HTTP_200_OK)
-	csrf_protect.set_csrf_cookie(
-		csrf_signed_token=config.CSRF_SECRET_KEY,
-		response=response
-	)
-	return response
+    response = Response(status_code=status.HTTP_200_OK)
+    csrf_protect.set_csrf_cookie(
+        csrf_signed_token=config.CSRF_SECRET_KEY, response=response
+    )
+    return response
 
 
 @router.get(
-	"/{date}",
-	response_model=MoodStampSchema,
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {
-			"model": MoodStampSchema,
-			"description": "MoodStamp retrieved successfully",
-		},
-		status.HTTP_404_NOT_FOUND: {
-			"model": MessageResponse,
-			"description": "MoodStamp not found",
-			"content": {
-				"application/json": {
-					"example": {"message": "MoodStamp does not exist"}
-				}
-			},
-		},
-	},
+    "/{date}",
+    response_model=MoodStampSchema,
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": MoodStampSchema,
+            "description": "MoodStamp retrieved successfully",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": MessageResponse,
+            "description": "MoodStamp not found",
+            "content": {
+                "application/json": {
+                    "example": {"message": "MoodStamp does not exist"}
+                }
+            },
+        },
+    },
 )
 async def get_moodstamp(
     date: date = Path(...),
@@ -151,24 +149,24 @@ async def get_moodstamp(
 
 
 @router.get(
-	"/",
-	response_model=list[MoodStampSchema],
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {
-			"model": list[MoodStampSchema],
-			"description": "MoodStamps retrieved successfully",
-		},
-		status.HTTP_404_NOT_FOUND: {
-			"model": MessageResponse,
-			"description": "MoodStamps not found",
-			"content": {
-				"application/json": {
-					"example": {"message": "MoodStamps does not exist"}
-				}
-			},
-		},
-	},
+    "/",
+    response_model=list[MoodStampSchema],
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {
+            "model": list[MoodStampSchema],
+            "description": "MoodStamps retrieved successfully",
+        },
+        status.HTTP_404_NOT_FOUND: {
+            "model": MessageResponse,
+            "description": "MoodStamps not found",
+            "content": {
+                "application/json": {
+                    "example": {"message": "MoodStamps does not exist"}
+                }
+            },
+        },
+    },
 )
 async def get_many_moodstamps(
     start_date: date | None = None,
@@ -231,31 +229,31 @@ async def get_many_moodstamps(
 
 
 @router.put(
-	"/{date}",
-	status_code=status.HTTP_200_OK,
-	responses={
-		status.HTTP_200_OK: {"description": "MoodStamp updated successfully"},
-		status.HTTP_404_NOT_FOUND: {
-			"model": MessageResponse,
-			"description": "MoodStamp not found",
-			"content": {
-				"application/json": {
-					"example": {"message": "MoodStamp does not exist"}
-				}
-			},
-		},
-		status.HTTP_422_UNPROCESSABLE_ENTITY: {
-			"model": MessageResponse,
-			"description": "Value/note are in the wrong format.",
-			"content": {
-				"application/json": {
-					"example": {
-						"message": "Value/note are in the wrong format."
-					}
-				}
-			},
-		},
-	},
+    "/{date}",
+    status_code=status.HTTP_200_OK,
+    responses={
+        status.HTTP_200_OK: {"description": "MoodStamp updated successfully"},
+        status.HTTP_404_NOT_FOUND: {
+            "model": MessageResponse,
+            "description": "MoodStamp not found",
+            "content": {
+                "application/json": {
+                    "example": {"message": "MoodStamp does not exist"}
+                }
+            },
+        },
+        status.HTTP_422_UNPROCESSABLE_ENTITY: {
+            "model": MessageResponse,
+            "description": "Value/note are in the wrong format.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "message": "Value/note are in the wrong format."
+                    }
+                }
+            },
+        },
+    },
 )
 async def update_moodstamp(
     request: UpdateMoodStampRequest,
