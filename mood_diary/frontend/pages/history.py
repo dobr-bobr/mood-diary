@@ -216,5 +216,5 @@ def display_mood_history():
 
 display_mood_history()
 
-if st.button("Back to Mood Tracker"):
+if st.button("Back"):
     st.switch_page("main.py")
