@@ -27,7 +27,7 @@ def get_rating_emoji(rating):
 def display_mood_history():
     st.title("Your Mood History")
 
-    col1, col2, col3 = st.columns([3, 3, 2])
+    col1, col2, col3 = st.columns([3, 3, 2])[:3]
     with col1:
         start_date = st.date_input(
             "Start date",
@@ -173,7 +173,7 @@ def display_mood_history():
                 st.markdown(
                     '<div class="mood-actions">', unsafe_allow_html=True
                 )
-                save_col, delete_col = st.columns(2)
+                save_col, delete_col = st.columns(2)[:2]
                 with save_col:
                     if st.button(
                         "💾",
