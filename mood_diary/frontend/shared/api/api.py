@@ -55,7 +55,8 @@ def fetch_change_password(old_password, new_password):
             st.switch_page("main.py")
         else:
             st.error(
-                f"Failed to change password {response.status_code, response.text}"
+                f"Failed to change password "
+                f"{response.status_code, response.text}"
             )
             st.stop()
     except Exception as e:
@@ -112,7 +113,8 @@ def fetch_create_mood(date, value, note):
             st.switch_page("pages/authorization.py")
         else:
             st.error(
-                f"Failed to create mood: {response.status_code} - {response.text}"
+                f"Failed to create mood: "
+                f"{response.status_code} - {response.text}"
             )
             return False
     except Exception as e:
