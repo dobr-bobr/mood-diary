@@ -25,35 +25,44 @@ def get_rating_emoji(rating):
 def display_mood_history():
     st.title("Your Mood History")
 
+    col1, col2, col3 = st.columns([3, 3, 2])
+    with col1:
+        start_date = st.date_input("Start date", value=datetime.date.today() - datetime.timedelta(days=30), key="filter_start_date")
+    with col2:
+        end_date = st.date_input("End date", value=datetime.date.today(), key="filter_end_date")
+    with col3:
+        rating_filter = st.selectbox("Rating", options=[None] + list(range(1, 11)), format_func=lambda x: "All" if x is None else f"{get_rating_emoji(x)} {x}", index=0, key="filter_rating")
+
     st.markdown("""
     <style>
     .mood-history-container {
-        margin-bottom: 28px;
-        padding: 25px 30px 18px 30px;
+        margin-bottom: 18px;
+        padding: 14px 18px 8px 18px;
         border: 1px solid #e0e0e0;
-        border-radius: 12px;
+        border-radius: 10px;
         background-color: #f9f9fb;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
     }
     .mood-date {
         font-weight: bold;
         color: #2c4a3a;
-        font-size: 17px;
-        margin-bottom: 12px;
+        font-size: 15px;
+        margin-bottom: 6px;
     }
     .mood-rating {
         display: flex;
         align-items: center;
-        gap: 8px;
-        font-size: 22px;
-        margin-bottom: 12px;
+        gap: 6px;
+        font-size: 18px;
+        margin-bottom: 6px;
     }
     .mood-note textarea {
         width: 100% !important;
-        min-height: 130px !important;
-        font-size: 16px !important;
-        padding: 10px !important;
-        border-radius: 8px !important;
+        min-height: 60px !important;
+        max-height: 90px !important;
+        font-size: 14px !important;
+        padding: 7px !important;
+        border-radius: 7px !important;
         border: 1px solid #b0b0b0 !important;
         resize: vertical !important;
         background: #fff !important;
@@ -61,26 +70,29 @@ def display_mood_history():
     }
     .mood-actions {
         display: flex;
-        gap: 15px;
+        gap: 10px;
         justify-content: flex-end;
-        margin-top: 10px;
+        margin-top: 6px;
     }
     .stButton>button {
-        border-radius: 8px !important;
-        font-size: 18px !important;
-        padding: 8px 0 !important;
+        border-radius: 7px !important;
+        font-size: 16px !important;
+        padding: 6px 0 !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-    st.session_state.mood_data = fetch_all_mood()
+    start_date_str = start_date.isoformat() if start_date else None
+    end_date_str = end_date.isoformat() if end_date else None
+    mood_data = fetch_all_mood(start_date=start_date_str, end_date=end_date_str, value=rating_filter)
+    st.session_state.mood_data = mood_data
 
-    if not st.session_state.mood_data:
+    if not mood_data:
         st.info("No mood entries found")
         return
 
     history = []
-    for entry in st.session_state.mood_data:
+    for entry in mood_data:
         try:
             date_str = entry.get("date")
             value = entry.get("value")
@@ -125,7 +137,7 @@ def display_mood_history():
                     "Note",
                     value=row["Note"],
                     key=f"note_edit_{index}",
-                    height=130,
+                    height=80,
                     label_visibility="collapsed",
                     placeholder="Enter your notes here...",
                     max_chars=500
@@ -140,7 +152,11 @@ def display_mood_history():
                                  help="Save changes",
                                  use_container_width=True):
                         if fetch_edit_mood(row["Date"].isoformat(), value=rating, note=note):
-                            st.session_state.mood_data = fetch_all_mood()
+                            st.session_state.mood_data = fetch_all_mood(
+                                start_date=start_date_str,
+                                end_date=end_date_str,
+                                value=rating_filter
+                            )
                             st.rerun()
                 with delete_col:
                     if st.button("🗑️", key=f"delete_{index}",
@@ -148,11 +164,14 @@ def display_mood_history():
                                  use_container_width=True):
                         if fetch_delete_mood(row["Date"]):
                             st.session_state.needs_refresh = True
-                            st.session_state.mood_data = fetch_all_mood()
+                            st.session_state.mood_data = fetch_all_mood(
+                                start_date=start_date_str,
+                                end_date=end_date_str,
+                                value=rating_filter
+                            )
                             st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
-            st.markdown('</div>', unsafe_allow_html=True)
             st.markdown("---")
 
 display_mood_history()
