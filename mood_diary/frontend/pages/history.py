@@ -27,7 +27,7 @@ def get_rating_emoji(rating):
 def display_mood_history():
     st.title("Your Mood History")
 
-    col1, col2, col3 = st.columns([3, 3, 2])
+    col1, col2, col3 = st.columns([3, 3, 2])[:3]
     with col1:
         start_date = st.date_input(
             "Start date",
@@ -53,8 +53,6 @@ def display_mood_history():
         """
     <style>
     .mood-history-container {
-        margin-bottom: 18px;
-        padding: 14px 18px 8px 18px;
         border: 1px solid #e0e0e0;
         border-radius: 10px;
         background-color: #f9f9fb;
@@ -89,12 +87,10 @@ def display_mood_history():
         display: flex;
         gap: 10px;
         justify-content: flex-end;
-        margin-top: 6px;
     }
     .stButton>button {
         border-radius: 7px !important;
         font-size: 16px !important;
-        padding: 6px 0 !important;
     }
     </style>
     """,
@@ -177,7 +173,7 @@ def display_mood_history():
                 st.markdown(
                     '<div class="mood-actions">', unsafe_allow_html=True
                 )
-                save_col, delete_col = st.columns(2)
+                save_col, delete_col = st.columns(2)[:2]
                 with save_col:
                     if st.button(
                         "💾",
