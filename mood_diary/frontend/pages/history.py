@@ -154,7 +154,8 @@ def display_mood_history():
                     label_visibility="collapsed",
                 )
                 st.markdown(
-                    f'<div class="mood-rating">{get_rating_emoji(rating)} {rating}</div>',
+                    f'<div class="mood-rating">'
+                    f'{get_rating_emoji(rating)} {rating}</div>',
                     unsafe_allow_html=True,
                 )
 
