@@ -1,6 +1,9 @@
 import streamlit as st
 
-from mood_diary.frontend.shared.api.api import fetch_change_password, fetch_change_name
+from mood_diary.frontend.shared.api.api import (
+    fetch_change_password,
+    fetch_change_name,
+)
 
 st.markdown(
     """
@@ -14,7 +17,7 @@ st.markdown(
     }
     </style>
     """,
-    unsafe_allow_html=True
+    unsafe_allow_html=True,
 )
 
 st.title("👤 Profile Settings")
@@ -23,7 +26,11 @@ with st.container():
     st.subheader("Change your name")
 
     with st.form("change_name_form", clear_on_submit=False):
-        new_name = st.text_input("Your name", value=st.session_state.get("name", "User"), max_chars=32)
+        new_name = st.text_input(
+            "Your name",
+            value=st.session_state.get("name", "User"),
+            max_chars=32,
+        )
         submitted_name = st.form_submit_button("Change name")
         if submitted_name:
             if not new_name.strip():
@@ -32,7 +39,7 @@ with st.container():
                 fetch_change_name(new_name)
                 st.success("Name changed successfully!")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 with st.container():
     st.subheader("Change your password")
@@ -40,7 +47,9 @@ with st.container():
     with st.form("change_password_form", clear_on_submit=True):
         old_password = st.text_input("Current password", type="password")
         new_password = st.text_input("New password", type="password")
-        confirm_password = st.text_input("Confirm new password", type="password")
+        confirm_password = st.text_input(
+            "Confirm new password", type="password"
+        )
         submitted_pass = st.form_submit_button("Change password")
 
         if submitted_pass:
@@ -54,10 +63,9 @@ with st.container():
                 fetch_change_password(old_password, new_password)
                 st.success("Password changed successfully!")
 
-    st.markdown('</div>', unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 if st.button("Logout", key="logout", help="Log out of your account"):
     for key in list(st.session_state.keys()):
         del st.session_state[key]
     st.switch_page("pages/authorization.py")
-

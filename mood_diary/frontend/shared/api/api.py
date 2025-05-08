@@ -1,4 +1,6 @@
-from mood_diary.frontend.shared.helper.requests_session import provide_requests_session
+from mood_diary.frontend.shared.helper.requests_session import (
+    provide_requests_session,
+)
 import streamlit as st
 
 BASE_URL = "https://mood-diary.duckdns.org/api"
@@ -37,6 +39,7 @@ def fetch_change_name(name):
         st.error(f"Error fetching change name: {e}")
         st.stop()
 
+
 def fetch_change_password(old_password, new_password):
     try:
         session = provide_requests_session()
@@ -48,7 +51,9 @@ def fetch_change_password(old_password, new_password):
         if response.status_code == 401:
             st.switch_page("pages/authorization.py")
         else:
-            st.error(f"Failed to change password {response.status_code, response.text}")
+            st.error(
+                f"Failed to change password {response.status_code, response.text}"
+            )
             st.stop()
     except Exception as e:
         st.error(f"Error fetching change password: {e}")

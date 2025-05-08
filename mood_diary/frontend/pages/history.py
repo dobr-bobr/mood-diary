@@ -1,7 +1,11 @@
 import datetime
 import pandas as pd
 import streamlit as st
-from mood_diary.frontend.shared.api.api import fetch_all_mood, fetch_delete_mood
+from mood_diary.frontend.shared.api.api import (
+    fetch_all_mood,
+    fetch_delete_mood,
+)
+
 
 def get_rating_emoji(rating):
     rating_emojis = {
@@ -14,9 +18,10 @@ def get_rating_emoji(rating):
         7: "🔵",  # Синий
         8: "🔵",  # Синий
         9: "🟣",  # Фиолетовый
-        10: "🟣"  # Фиолетовый
+        10: "🟣",  # Фиолетовый
     }
     return rating_emojis.get(rating, "⭐")
+
 
 def display_mood_history():
     st.title("Your Mood History")
@@ -33,15 +38,20 @@ def display_mood_history():
             value = entry.get("value")
             note = entry.get("note", "")
 
-            date_obj = (datetime.datetime.fromisoformat(date_str).date() if "T" in date_str
-                        else datetime.date.fromisoformat(date_str))
+            date_obj = (
+                datetime.datetime.fromisoformat(date_str).date()
+                if "T" in date_str
+                else datetime.date.fromisoformat(date_str)
+            )
 
-            history.append({
-                "Date": date_obj,
-                "Rating": value,
-                "Note": note,
-                "Delete": date_obj
-            })
+            history.append(
+                {
+                    "Date": date_obj,
+                    "Rating": value,
+                    "Note": note,
+                    "Delete": date_obj,
+                }
+            )
         except Exception as e:
             print(f"Error processing entry: {entry}, error: {e}")
 
@@ -58,6 +68,7 @@ def display_mood_history():
                 st.session_state.needs_refresh = True
                 st.session_state.mood_data = fetch_all_mood()
                 st.rerun()
+
 
 display_mood_history()
 
