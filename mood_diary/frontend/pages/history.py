@@ -7,6 +7,7 @@ from mood_diary.frontend.shared.api.api import (
     fetch_edit_mood,
 )
 
+
 def get_rating_emoji(rating):
     rating_emojis = {
         1: "🔴",
@@ -22,18 +23,34 @@ def get_rating_emoji(rating):
     }
     return rating_emojis.get(rating, "⭐")
 
+
 def display_mood_history():
     st.title("Your Mood History")
 
     col1, col2, col3 = st.columns([3, 3, 2])
     with col1:
-        start_date = st.date_input("Start date", value=datetime.date.today() - datetime.timedelta(days=30), key="filter_start_date")
+        start_date = st.date_input(
+            "Start date",
+            value=datetime.date.today() - datetime.timedelta(days=30),
+            key="filter_start_date",
+        )
     with col2:
-        end_date = st.date_input("End date", value=datetime.date.today(), key="filter_end_date")
+        end_date = st.date_input(
+            "End date", value=datetime.date.today(), key="filter_end_date"
+        )
     with col3:
-        rating_filter = st.selectbox("Rating", options=[None] + list(range(1, 11)), format_func=lambda x: "All" if x is None else f"{get_rating_emoji(x)} {x}", index=0, key="filter_rating")
+        rating_filter = st.selectbox(
+            "Rating",
+            options=[None] + list(range(1, 11)),
+            format_func=lambda x: (
+                "All" if x is None else f"{get_rating_emoji(x)} {x}"
+            ),
+            index=0,
+            key="filter_rating",
+        )
 
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     .mood-history-container {
         margin-bottom: 18px;
@@ -80,11 +97,15 @@ def display_mood_history():
         padding: 6px 0 !important;
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
     start_date_str = start_date.isoformat() if start_date else None
     end_date_str = end_date.isoformat() if end_date else None
-    mood_data = fetch_all_mood(start_date=start_date_str, end_date=end_date_str, value=rating_filter)
+    mood_data = fetch_all_mood(
+        start_date=start_date_str, end_date=end_date_str, value=rating_filter
+    )
     st.session_state.mood_data = mood_data
 
     if not mood_data:
@@ -119,7 +140,10 @@ def display_mood_history():
             cols = st.columns([2, 1, 5, 2])
 
             with cols[0]:
-                st.markdown(f'<div class="mood-date">{row["Date"]}</div>', unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="mood-date">{row["Date"]}</div>',
+                    unsafe_allow_html=True,
+                )
 
             with cols[1]:
                 rating = st.selectbox(
@@ -127,10 +151,12 @@ def display_mood_history():
                     options=list(range(1, 11)),
                     index=row["Rating"] - 1,
                     key=f"rating_edit_{index}",
-                    label_visibility="collapsed"
+                    label_visibility="collapsed",
                 )
-                st.markdown(f'<div class="mood-rating">{get_rating_emoji(rating)} {rating}</div>',
-                            unsafe_allow_html=True)
+                st.markdown(
+                    f'<div class="mood-rating">{get_rating_emoji(rating)} {rating}</div>',
+                    unsafe_allow_html=True,
+                )
 
             with cols[2]:
                 note = st.text_area(
@@ -140,39 +166,52 @@ def display_mood_history():
                     height=80,
                     label_visibility="collapsed",
                     placeholder="Enter your notes here...",
-                    max_chars=500
+                    max_chars=500,
                 )
-                st.markdown('<div class="mood-note"></div>', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="mood-note"></div>', unsafe_allow_html=True
+                )
 
             with cols[3]:
-                st.markdown('<div class="mood-actions">', unsafe_allow_html=True)
+                st.markdown(
+                    '<div class="mood-actions">', unsafe_allow_html=True
+                )
                 save_col, delete_col = st.columns(2)
                 with save_col:
-                    if st.button("💾", key=f"save_{index}",
-                                 help="Save changes",
-                                 use_container_width=True):
-                        if fetch_edit_mood(row["Date"].isoformat(), value=rating, note=note):
+                    if st.button(
+                        "💾",
+                        key=f"save_{index}",
+                        help="Save changes",
+                        use_container_width=True,
+                    ):
+                        if fetch_edit_mood(
+                            row["Date"].isoformat(), value=rating, note=note
+                        ):
                             st.session_state.mood_data = fetch_all_mood(
                                 start_date=start_date_str,
                                 end_date=end_date_str,
-                                value=rating_filter
+                                value=rating_filter,
                             )
                             st.rerun()
                 with delete_col:
-                    if st.button("🗑️", key=f"delete_{index}",
-                                 help="Delete entry",
-                                 use_container_width=True):
+                    if st.button(
+                        "🗑️",
+                        key=f"delete_{index}",
+                        help="Delete entry",
+                        use_container_width=True,
+                    ):
                         if fetch_delete_mood(row["Date"]):
                             st.session_state.needs_refresh = True
                             st.session_state.mood_data = fetch_all_mood(
                                 start_date=start_date_str,
                                 end_date=end_date_str,
-                                value=rating_filter
+                                value=rating_filter,
                             )
                             st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+                st.markdown("</div>", unsafe_allow_html=True)
 
             st.markdown("---")
+
 
 display_mood_history()
 
