@@ -50,7 +50,7 @@ class SQLiteMoodRepository(MoodStampRepository):
                 user_id=row["user_id"],
                 date=row["date"],
                 value=row["value"],
-                note=row["note"],
+                note=bleach.clean(row["note"]),
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
             )
@@ -84,7 +84,7 @@ class SQLiteMoodRepository(MoodStampRepository):
                 user_id=row["user_id"],
                 date=row["date"],
                 value=row["value"],
-                note=row["note"],
+                note=bleach.clean(row["note"]),
                 created_at=row["created_at"],
                 updated_at=row["updated_at"],
             )
@@ -108,7 +108,7 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         stamp_id = uuid4()
         created_at = updated_at = datetime.now()
-
+        sanitized_note = bleach.clean(body.note)
         cursor.execute(
             """INSERT INTO moodstamps
             (id, user_id, date, value, note, created_at, updated_at)
@@ -118,7 +118,7 @@ class SQLiteMoodRepository(MoodStampRepository):
                 str(user_id),
                 body.date,
                 body.value,
-                body.note,
+                sanitized_note,
                 created_at,
                 updated_at,
             ),
@@ -130,7 +130,7 @@ class SQLiteMoodRepository(MoodStampRepository):
             user_id=body.user_id,
             date=body.date,
             value=body.value,
-            note=body.note,
+            note=sanitized_note,
             created_at=created_at,
             updated_at=updated_at,
         )
@@ -151,9 +151,10 @@ class SQLiteMoodRepository(MoodStampRepository):
             return None
 
         updated_at = datetime.now()
+        sanitized_note = bleach.clean(body.note if body.note is not None else row["note"])
         update_values = {
-            "value": body.value if body.value is not None else row[3],
-            "note": body.note if body.note is not None else row[4],
+            "value": body.value if body.value is not None else row["value"],
+            "note": sanitized_note,
             "updated_at": updated_at,
         }
 

@@ -28,19 +28,18 @@ class Settings(BaseSettings):
 	AUTH_SECURE_COOKIE: bool = False
 
 	ROOT_PATH: str = "/api"
+	SQLITE_DB_PATH: str = "data/mood_diary.db"
 
-  SQLITE_DB_PATH: str = "data/mood_diary.db"
-      
-  REDIS_HOST: str = "redis"
-  REDIS_PORT: int = 6379
-  REDIS_CACHE_TTL: int = 60  # seconds
-   
-  # Logging configuration
-  LOGGING_LEVEL: str = "INFO"
-  LOGGING_FORMAT: str = (
-      "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-  )  
-  LOGGING_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
+	REDIS_HOST: str = "redis"
+	REDIS_PORT: int = 6379
+	REDIS_CACHE_TTL: int = 60  # seconds
+
+	# Logging configuration
+	LOGGING_LEVEL: str = "INFO"
+	LOGGING_FORMAT: str = (
+		"%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+	)
+	LOGGING_DATE_FORMAT: str = "%Y-%m-%d %H:%M:%S"
 
 
 config = Settings()
