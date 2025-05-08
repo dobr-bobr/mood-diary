@@ -1,10 +1,10 @@
 from fastapi_csrf_protect import CsrfProtect
-from pydantic import ConfigDict
+from pydantic_settings import SettingsConfigDict
 from pydantic_settings import BaseSettings
 
 
 class CsrfProtectSettings(BaseSettings):
-    model_config = ConfigDict(extra="forbid")
+    model_config = SettingsConfigDict(extra="forbid")
     secret_key: str
     cookie_secure: bool = True
     cookie_samesite: str = "lax"
