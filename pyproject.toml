@@ -25,6 +25,8 @@ dependencies = [
     "bleach (>=6.0.0,<7.0.0)",
     "fastapi_csrf_protect (>=1.0.0,<2.0.0)",
     "locust (>=2.17.0,<3.6.0)",
+    "fastapi-middleware (>=0.1.0,<0.2.0)",
+    "redis (>=5.0.1,<6.0.0)",
 ]
 
 [tool.poetry.scripts]
