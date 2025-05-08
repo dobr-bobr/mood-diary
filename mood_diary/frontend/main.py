@@ -226,6 +226,7 @@ with col1:
 
 with col2:
     if st.button("View Calendar"):
+        st.session_state.needs_refresh = True
         st.switch_page("pages/calendar.py")
 
 with col3:
