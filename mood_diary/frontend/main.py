@@ -1,4 +1,5 @@
 import datetime
+from mood_diary.frontend.pages.history import get_rating_emoji
 from mood_diary.frontend.shared.api.api import fetch_profile, fetch_all_mood, fetch_create_mood
 import altair as alt
 import pandas as pd
@@ -120,34 +121,24 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
     if st.session_state.get("rating_required", False):
         st.markdown("<p class='rating-required'>Please select a rating</p>", unsafe_allow_html=True)
 
-    rating_colors = {
-        1: "🔴",
-        2: "🟠",
-        3: "🟡",
-        4: "🟡",
-        5: "🟢",
-        6: "🟢",
-        7: "🔵",
-        8: "🔵",
-        9: "🟣",
-        10: "🟣"
-    }
-
     rating_cols = st.columns(10)
     for i, col in enumerate(rating_cols):
         rating_value = i + 1
-        color = rating_colors[rating_value]
+        emoji = get_rating_emoji(rating_value)
 
         with col:
             selected = st.session_state.selected_rating == rating_value
             button_style = f"""
             <style>
-            div[data-testid="stForm"] div[data-testid="column"]:nth-of-type({i + 1}) button
+            div[data-testid="stForm"] div[data-testid="column"]:nth-of-type({i + 1}) button {{
+                {"border: 3px solid white !important;" if selected else ""}
+                {"box-shadow: 0 0 10px white !important;" if selected else ""}
+            }}
             </style>
             """
             st.markdown(button_style, unsafe_allow_html=True)
 
-            if st.form_submit_button(str(rating_value) + color):
+            if st.form_submit_button(f"{rating_value} {emoji}"):
                 st.session_state.selected_rating = rating_value
                 st.session_state.rating_required = False
 
