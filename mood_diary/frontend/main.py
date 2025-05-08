@@ -59,11 +59,15 @@ st.markdown(
 )
 
 
-def fetch_all_mood(start_date, end_date, value=None):
+def fetch_all_mood(start_date=None, end_date=None, value=None):
     try:
-        params = {"start_date": start_date, "end_date": end_date}
+        params = {}
         if value is not None:
             params["value"] = value
+        if start_date is not None:
+            params["start_date"] = start_date
+        if end_date is not None:
+            params["end_date"] = end_date
 
         response = session.get(f"{BASE_URL}/mood", params=params)
 
@@ -144,7 +148,6 @@ def get_user_ratings_data():
 
 if "user_ratings_df" not in st.session_state:
     st.session_state.user_ratings_df = get_user_ratings_data()
-
 if "form_comment" not in st.session_state:
     st.session_state.form_comment = ""
 if "selected_rating" not in st.session_state:
@@ -303,3 +306,6 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
                 st.session_state.selected_rating = None
                 st.session_state.user_ratings_df = get_user_ratings_data()
                 st.rerun()
+
+if st.button("View Full Mood History"):
+    st.switch_page("pages/history.py")
