@@ -154,9 +154,11 @@ class SQLiteMoodRepository(MoodStampRepository):
 			return None
 
 		updated_at = datetime.now()
+		sanitized_note = bleach.clean(body.note if body.note is not None else row["note"], strip=True)
+
 		update_values = {
-			"value": body.value if body.value is not None else row[3],
-			"note": body.note if body.note is not None else row[4],
+			"value": body.value if body.value is not None else row["value"],
+			"note": sanitized_note,
 			"updated_at": updated_at,
 		}
 
