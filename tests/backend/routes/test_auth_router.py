@@ -71,6 +71,7 @@ def main_app():
         AUTH_TOKEN_SECRET_KEY="fixed-test-secret-key",
         SQLITE_DB_PATH=":memory:",
         REDIS_HOST="mocked_redis",
+        CSRF_SECRET_KEY="fixed-test-csrf-secret-key",
     )
     app = get_app(test_settings)
     yield app

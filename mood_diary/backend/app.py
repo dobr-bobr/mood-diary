@@ -1,6 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException
+from fastapi_csrf_protect.exceptions import CsrfProtectError
+from starlette.responses import JSONResponse
 
 from mood_diary.backend.database.db import init_db
 from mood_diary.backend.exceptions.base import BaseApplicationException
@@ -17,22 +19,25 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def get_app(config_obj) -> FastAPI:
+def get_app(app_config) -> FastAPI:
     @asynccontextmanager
     async def lifespan(a: FastAPI):
-        if not config_obj.AUTH_TOKEN_SECRET_KEY:
+        if not app_config.AUTH_TOKEN_SECRET_KEY:
             raise Exception(
                 "Please set AUTH_TOKEN_SECRET_KEY environment variable"
             )
 
-        init_db(config_obj.SQLITE_DB_PATH)
+        if not app_config.CSRF_SECRET_KEY:
+            raise Exception("Please set CSRF_SECRET_KEY environment variable")
+
+        init_db(app_config.SQLITE_DB_PATH)
         yield
 
     app = FastAPI(
-        title=config_obj.APP_TITLE,
-        description=config_obj.APP_DESCRIPTION,
+        title=app_config.APP_TITLE,
+        description=app_config.APP_DESCRIPTION,
         lifespan=lifespan,
-        root_path=config_obj.ROOT_PATH,
+        root_path=app_config.ROOT_PATH,
     )
 
     @app.exception_handler(BaseApplicationException)
@@ -41,6 +46,14 @@ def get_app(config_obj) -> FastAPI:
     ):
         raise HTTPException(
             status_code=exc.http_status_code, detail=exc.message
+        )
+
+    @app.exception_handler(CsrfProtectError)
+    def csrf_protect_exception_handler(
+        request: Request, exc: CsrfProtectError
+    ):
+        return JSONResponse(
+            status_code=exc.status_code, content={"detail": exc.message}
         )
 
     app.include_router(auth_router, tags=["Auth"], prefix="/auth")

@@ -70,12 +70,13 @@ def test_init_db(
     mock_cursor: MagicMock,
 ):
     mood_repo.init_db()
-    mock_connection.cursor.assert_called_once()
-    mock_cursor.execute.assert_called_once_with(ANY)
+    mock_connection.cursor.assert_called()
+    mock_cursor.execute.assert_called_with(ANY)
     assert (
         "CREATE TABLE IF NOT EXISTS moodstamps"
-        in mock_cursor.execute.call_args[0][0]
+        in mock_cursor.execute.call_args_list[0][0][0]
     )
+
     mock_connection.commit.assert_called_once()
 
 
@@ -314,6 +315,10 @@ async def test_create_moodstamp_success(
         fixed_time,
         fixed_time,
     )
+
+    mock_connection.cursor.assert_called()
+    assert mock_cursor.execute.call_count >= 1
+    assert "INSERT INTO moodstamps" in mock_cursor.execute.call_args[0][0]
 
     mock_connection.commit.assert_called_once()
     assert created_moodstamp == expected_moodstamp

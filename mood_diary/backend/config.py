@@ -1,4 +1,13 @@
+from fastapi_csrf_protect import CsrfProtect
+from pydantic_settings import SettingsConfigDict
 from pydantic_settings import BaseSettings
+
+
+class CsrfProtectSettings(BaseSettings):
+    model_config = SettingsConfigDict(extra="forbid")
+    secret_key: str
+    cookie_secure: bool = True
+    cookie_samesite: str = "lax"
 
 
 class Settings(BaseSettings):
@@ -11,13 +20,14 @@ class Settings(BaseSettings):
     PASSWORD_HASHING_SALT_SIZE: int = 16
     PASSWORD_HASHING_SPLIT_CHAR: str = "$"
 
+    CSRF_SECRET_KEY: str = ""
+
     AUTH_TOKEN_SECRET_KEY: str = ""
     AUTH_TOKEN_ALGORITHM: str = "HS256"
     AUTH_TOKEN_ACCESS_TOKEN_EXPIRE_MINUTES: int = 360
     AUTH_SECURE_COOKIE: bool = False
 
     ROOT_PATH: str = "/api"
-
     SQLITE_DB_PATH: str = "data/mood_diary.db"
 
     REDIS_HOST: str = "redis"
@@ -33,3 +43,8 @@ class Settings(BaseSettings):
 
 
 config = Settings()
+
+
+@CsrfProtect.load_config
+def get_csrf_config():
+    return CsrfProtectSettings(secret_key=config.CSRF_SECRET_KEY)
