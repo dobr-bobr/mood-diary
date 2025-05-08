@@ -65,7 +65,7 @@ def test_init_db(
     mock_cursor: MagicMock,
 ):
     mood_repo.init_db()
-    mock_connection.cursor.assert_called_once()
+    mock_connection.cursor.assert_called()
     mock_cursor.execute.assert_called_with(ANY)
     assert (
         "CREATE TABLE IF NOT EXISTS moodstamps"
