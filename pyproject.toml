@@ -24,8 +24,6 @@ dependencies = [
     "streamlit-calendar (>=1.3.0,<2.0.0)",
     "bleach (>=6.0.0,<7.0.0)",
     "fastapi_csrf_protect (>=1.0.0,<2.0.0)",
-    "locust (>=2.17.0,<3.6.0)",
-    "fastapi-middleware (>=0.1.0,<0.2.0)",
     "redis (>=5.0.1,<6.0.0)",
 ]
 
@@ -53,6 +51,11 @@ mypy = "^1.15.0"
 mutmut = "^2.5.1"
 pandas-stubs = "^2.2.2.240818"
 types-requests = "^2.32.0.20240818"
+locust = "2.37.1"
+gevent = "^24.10.1"
+zope-event = "^5.0"
+zope-interface = "^7.2"
+
 
 [tool.pytest.ini_options]
 pythonpath = [
