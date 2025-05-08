@@ -1,7 +1,7 @@
 import datetime
-from mood_diary.frontend.shared.helper.requests_session import (
+from shared.helper.requests_session import (
     provide_requests_session,
-)
+)  # type: ignore
 import altair as alt
 import pandas as pd
 import streamlit as st
@@ -46,6 +46,9 @@ st.markdown(
     border: 3px solid white !important;
     box-shadow: 0 0 10px white !important;
 }}
+.date-picker {{
+    margin: 15px 0;
+}}
 </style>
 <div class="mood-banner">
     <h2>How do you feel today, {st.session_state.name}?</h2>
@@ -76,10 +79,10 @@ def fetch_all_mood(start_date, end_date, value=None):
         st.stop()
 
 
-def fetch_create_mood(value, note):
+def fetch_create_mood(date, value, note):
     try:
         payload = {
-            "date": datetime.date.today().isoformat(),
+            "date": date.isoformat(),
             "value": value,
             "note": note,
         }
@@ -93,7 +96,7 @@ def fetch_create_mood(value, note):
             error_msg = response.json().get(
                 "detail", "Mood for this date already exists"
             )
-            st.warning(f"{error_msg}")  # noqa: E501
+            st.warning(f"{error_msg}")
             return False
         elif response.status_code == 401:
             st.switch_page("pages/authorization.py")
@@ -146,6 +149,8 @@ if "form_comment" not in st.session_state:
     st.session_state.form_comment = ""
 if "selected_rating" not in st.session_state:
     st.session_state.selected_rating = None
+if "selected_date" not in st.session_state:
+    st.session_state.selected_date = datetime.date.today()
 
 if not st.session_state.user_ratings_df.empty:
     user_ratings = st.session_state.user_ratings_df
@@ -270,6 +275,16 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
                 st.session_state.selected_rating = rating_value
                 st.session_state.rating_required = False
 
+    st.markdown('<div class="date-picker">', unsafe_allow_html=True)
+    selected_date = st.date_input(
+        "Select date",
+        value=st.session_state.selected_date,
+        min_value=datetime.date.today() - datetime.timedelta(days=36500),
+        max_value=datetime.date.today(),
+    )
+    st.session_state.selected_date = selected_date
+    st.markdown('</div>', unsafe_allow_html=True)
+
     submitted = st.form_submit_button("Submit")
     if submitted:
         if st.session_state.selected_rating is None:
@@ -279,7 +294,9 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
             st.warning("Please enter a comment")
         else:
             success = fetch_create_mood(
-                st.session_state.selected_rating, comment
+                st.session_state.selected_date,
+                st.session_state.selected_rating,
+                comment
             )
             if success:
                 st.session_state.form_comment = ""
