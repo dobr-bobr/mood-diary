@@ -57,12 +57,13 @@ def test_user_id() -> uuid.UUID:
     return uuid.uuid4()
 
 
+# Fixture for the main application instance
 @pytest.fixture
 def main_app_mood(
     test_user_id: uuid.UUID,
     mock_mood_service: AsyncMock,
     mock_redis_client: AsyncMock,
-) -> FastAPI:
+) -> Generator[FastAPI, None, None]:
     app = FastAPI()
     app.include_router(mood_router, prefix="/api/moods", tags=["moods"])
 
@@ -85,7 +86,9 @@ def main_app_mood(
     app.dependency_overrides[get_mood_service] = override_get_mood_service
     app.dependency_overrides[get_redis_client] = override_get_redis_client
 
-    return app
+    yield app
+
+    app.dependency_overrides = {}
 
 
 @pytest.fixture
@@ -145,9 +148,7 @@ def test_create_moodstamp_success(
 
     assert response.status_code == status.HTTP_200_OK
     response_data = response.json()
-    assert response_data["user_id"] == str(test_user_id)
-    assert response_data["value"] == create_payload["value"]
-    assert response_data["note"] == create_payload["note"]
+    assert response_data == sample_mood_stamp_schema.model_dump(mode="json")
 
     mock_mood_service.create.assert_awaited_once()
     call_args = mock_mood_service.create.call_args[1]
@@ -284,6 +285,8 @@ def test_update_moodstamp_success(
     )
 
     assert response.status_code == status.HTTP_200_OK
+    assert response.json() == updated_schema.model_dump(mode="json")
+
     mock_mood_service.update.assert_awaited_once()
     call_args = mock_mood_service.update.call_args[1]
     assert call_args["user_id"] == test_user_id
@@ -309,21 +312,46 @@ def test_update_moodstamp_not_found(
     mock_mood_service.update.assert_awaited_once()
 
 
+@pytest.mark.parametrize(
+    "payload, expected_detail_contains",
+    [
+        # Invalid value type
+        ({"value": "not-an-integer", "note": "Invalid type"}, "int_parsing"),
+        # Invalid value range
+        ({"value": 0, "note": "Too low"}, "greater_than_equal"),
+        ({"value": 11, "note": "Too high"}, "less_than_equal"),
+    ],
+)
 def test_update_moodstamp_validation_error(
     client_mood: TestClient,
+    mock_mood_service: AsyncMock,
+    test_user_id: uuid.UUID,
+    payload: dict,
+    expected_detail_contains: str,
 ):
+    """Tests validation errors for updating moodstamps."""
     test_date = date.today()
     test_date_str = test_date.isoformat()
-    invalid_payload = {"value": "not-an-integer", "note": "Invalid data"}
 
     client_mood.cookies.set("access_token", "fake-test-token")
-    response = client_mood.put(
-        f"/api/moods/{test_date_str}", json=invalid_payload
-    )
+    response = client_mood.put(f"/api/moods/{test_date_str}", json=payload)
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
-    assert "detail" in response.json()
-    assert response.json()["detail"][0]["type"] == "int_parsing"  # Пример
+    details = response.json().get("detail", [])
+    assert isinstance(details, list)
+    assert len(details) > 0
+    # Check if expected error type/message substring is present in any detail item
+    found_error = False
+    for detail in details:
+        # Check in 'type' field or 'msg' field for the expected error string
+        if expected_detail_contains in detail.get(
+            "type", ""
+        ) or expected_detail_contains in detail.get("msg", ""):
+            found_error = True
+            break
+    assert (
+        found_error
+    ), f"Expected error detail containing '{expected_detail_contains}' not found in {details}"
 
 
 def test_delete_moodstamp_success(

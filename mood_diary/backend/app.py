@@ -1,6 +1,5 @@
 import logging
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI, Request, HTTPException
 
 from mood_diary.backend.database.db import init_db

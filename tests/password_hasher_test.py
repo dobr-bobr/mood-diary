@@ -58,7 +58,7 @@ def test_verify_invalid_hash_format_hex(password_hasher: SaltPasswordHasher):
 def test_hash_bytes_input(password_hasher: SaltPasswordHasher):
     """Test hashing bytes directly."""
     password_bytes = b"mysecretbytespassword"
-    hashed = password_hasher.hash(password_bytes)  # type: ignore # Test bytes input directly
+    hashed = password_hasher.hash(password_bytes)  # Test bytes input directly
     assert isinstance(hashed, str)
     assert password_hasher.split_char in hashed
     # Verify the bytes password
@@ -71,11 +71,24 @@ def test_verify_bytes_password_input(password_hasher: SaltPasswordHasher):
     password = "mysecretpassword"
     password_bytes = password.encode(password_hasher.encoding)
     hashed = password_hasher.hash(password)
-    result = password_hasher.verify(password_bytes, hashed)  # type: ignore # Test bytes input directly
+    result = password_hasher.verify(
+        password_bytes, hashed
+    )  # Test bytes input directly
+    assert result is True
+
+
+def test_hash_invalid_utf8_bytes_input(password_hasher: SaltPasswordHasher):
+    """Test hashing bytes that are not valid UTF-8."""
+    invalid_utf8_bytes = b"\x80abc"  # \x80 is not a valid start byte in UTF-8
+    # Expect hash to still work as it should process raw bytes
+    hashed = password_hasher.hash(invalid_utf8_bytes)
+    assert isinstance(hashed, str)
+    # Verify should also work with the original bytes
+    result = password_hasher.verify(invalid_utf8_bytes, hashed)
     assert result is True
 
 
 def test_invalid_password_type(password_hasher: SaltPasswordHasher):
     """Test that hashing raises TypeError for invalid password types."""
-    with pytest.raises(TypeError):
+    with pytest.raises(TypeError, match="Password must be str or bytes"):
         password_hasher.hash(12345)  # type: ignore

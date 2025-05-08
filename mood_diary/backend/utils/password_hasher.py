@@ -6,12 +6,12 @@ from abc import ABC, abstractmethod
 
 class PasswordHasher(ABC):
     @abstractmethod
-    def hash(self, password: str) -> str:
+    def hash(self, password: str | bytes) -> str:
         """Hash a password"""
         pass
 
     @abstractmethod
-    def verify(self, password: str, stored_hash: str) -> bool:
+    def verify(self, password: str | bytes, stored_hash: str) -> bool:
         """Verify a password against a stored hash"""
         pass
 
@@ -31,7 +31,7 @@ class SaltPasswordHasher(PasswordHasher):
         self.hash_iterations = hash_iterations
         self.split_char = split_char
 
-    def hash(self, password: str) -> str:
+    def hash(self, password: str | bytes) -> str:
         salt = os.urandom(self.salt_size)
 
         password_bytes = self.__password_bytes(password)
@@ -39,7 +39,7 @@ class SaltPasswordHasher(PasswordHasher):
 
         return f"{salt.hex()}{self.split_char}{password_hash.hex()}"
 
-    def verify(self, password: str, stored_hash: str) -> bool:
+    def verify(self, password: str | bytes, stored_hash: str) -> bool:
         try:
             salt, expected_password_hash = [
                 bytes.fromhex(x) for x in stored_hash.split(self.split_char)
