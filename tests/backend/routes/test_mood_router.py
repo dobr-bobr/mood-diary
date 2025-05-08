@@ -4,11 +4,8 @@ from typing import Generator
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import FastAPI, status, Cookie, Response, Depends
+from fastapi import FastAPI, status, Cookie
 from fastapi.testclient import TestClient
-from fastapi_csrf_protect import CsrfProtect
-
-from mood_diary.backend.config import CsrfProtectSettings
 from mood_diary.backend.exceptions.user import InvalidOrExpiredAccessToken
 from mood_diary.backend.exceptions.mood import (
     MoodStampAlreadyExists,
@@ -60,15 +57,9 @@ def test_user_id() -> uuid.UUID:
 
 
 @pytest.fixture
-def csrf_instance() -> CsrfProtectSettings:
-    return CsrfProtectSettings(secret_key="secret")
-
-
-@pytest.fixture
 def main_app_mood(
     test_user_id: uuid.UUID,
     mock_mood_service: AsyncMock,
-    csrf_instance: CsrfProtectSettings
     mock_redis_client: AsyncMock,
 ) -> FastAPI:
     app = FastAPI()
@@ -92,15 +83,6 @@ def main_app_mood(
     )
     app.dependency_overrides[get_mood_service] = override_get_mood_service
     app.dependency_overrides[get_redis_client] = override_get_redis_client
-
-    @app.get("/")
-    async def set_csrf(
-            response: Response,
-            csrf_protect: CsrfProtectSettings = Depends(csrf_instance)
-    ):
-        token, signed_token = csrf_protect.generate_csrf_tokens()
-        csrf_protect.set_csrf_cookie(signed_token, response)
-        return {"csrf_token": token}
 
     return app
 
@@ -148,11 +130,6 @@ def test_create_moodstamp_success(
     test_user_id: uuid.UUID,
     sample_mood_stamp_schema: MoodStampSchema,
 ):
-    response_get = client_mood.get("/")
-    response_get.raise_for_status()
-    csrf_cookie = response_get.cookies.get("fastapi-csrf-token")
-    assert csrf_cookie is not None
-
     mock_mood_service.create.return_value = sample_mood_stamp_schema
     today_str = sample_mood_stamp_schema.date.isoformat()
 
@@ -184,11 +161,6 @@ def test_create_moodstamp_already_exists(
     mock_mood_service: AsyncMock,
     test_user_id: uuid.UUID,
 ):
-    response_get = client_mood.get("/")
-    response_get.raise_for_status()
-    csrf_cookie = response_get.cookies.get("fastapi-csrf-token")
-    assert csrf_cookie is not None
-
     mock_mood_service.create.side_effect = MoodStampAlreadyExists()
 
     create_payload = {
