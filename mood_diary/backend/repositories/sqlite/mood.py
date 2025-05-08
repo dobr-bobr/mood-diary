@@ -23,18 +23,18 @@ class SQLiteMoodRepository(MoodStampRepository):
         cursor = self.connection.cursor()
         cursor.execute(
             """
-			CREATE TABLE IF NOT EXISTS moodstamps (
-				id TEXT PRIMARY KEY,
-				user_id TEXT NOT NULL,
-				date DATE NOT NULL,
-				value INT NOT NULL,
-				note TEXT NOT NULL,
-				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-				updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-				FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-				UNIQUE (user_id, date)
-			)
-			"""
+            CREATE TABLE IF NOT EXISTS moodstamps (
+                id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                date DATE NOT NULL,
+                value INT NOT NULL,
+                note TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                UNIQUE (user_id, date)
+            )
+            """
         )
         self.create_indexes()
         self.connection.commit()
@@ -43,19 +43,35 @@ class SQLiteMoodRepository(MoodStampRepository):
         cursor = self.connection.cursor()
 
         cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_moodstamps_user_date ON moodstamps (user_id, date)"
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_moodstamps_user_date
+            ON moodstamps (user_id, date)
+            """
         )
 
         cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_moodstamps_user ON moodstamps (user_id)"
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_moodstamps_user
+            ON moodstamps (user_id)
+            """
         )
 
         cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_moodstamps_date ON moodstamps (date)"
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_moodstamps_date
+            ON moodstamps (date)
+            """
         )
 
         cursor.execute(
-            "CREATE INDEX IF NOT EXISTS idx_moodstamps_value ON moodstamps (value)"
+            """
+            CREATE INDEX IF NOT EXISTS
+            idx_moodstamps_value
+            ON moodstamps(value)
+            """
         )
 
     async def get(self, user_id: UUID, date: date) -> MoodStamp | None:
@@ -132,8 +148,8 @@ class SQLiteMoodRepository(MoodStampRepository):
         sanitized_note = bleach.clean(body.note)
         cursor.execute(
             """INSERT INTO moodstamps
-			(id, user_id, date, value, note, created_at, updated_at)
-			VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (id, user_id, date, value, note, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
                 str(stamp_id),
                 str(user_id),
@@ -182,8 +198,8 @@ class SQLiteMoodRepository(MoodStampRepository):
 
         cursor.execute(
             """UPDATE moodstamps
-			SET value = ?, note = ?, updated_at = ?
-			WHERE user_id = ? AND date = ?""",
+            SET value = ?, note = ?, updated_at = ?
+            WHERE user_id = ? AND date = ?""",
             (
                 update_values["value"],
                 update_values["note"],

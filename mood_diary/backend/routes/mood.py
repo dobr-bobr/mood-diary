@@ -19,7 +19,6 @@ from mood_diary.common.api.schemas.mood import (
     MoodStampSchema,
 )
 from mood_diary.common.api.schemas.common import MessageResponse
-from mood_diary.backend.config import config
 from mood_diary.backend.database.cache import get_redis_client
 
 logger = logging.getLogger("mood_diary.backend.app")

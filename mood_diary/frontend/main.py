@@ -99,7 +99,9 @@ def fetch_create_mood(value, note):
             st.switch_page("pages/authorization.py")
         else:
             st.error(
-                f"Failed to create mood: {response.status_code} - {response.text}"
+                f"Failed to create mood: {
+                    response.status_code} - {
+                    response.text}"
             )
             return False
     except Exception as e:
