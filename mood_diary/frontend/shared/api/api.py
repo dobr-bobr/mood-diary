@@ -50,6 +50,9 @@ def fetch_change_password(old_password, new_password):
         response = session.put(f"{BASE_URL}/auth/password", json=params)
         if response.status_code == 401:
             st.switch_page("pages/authorization.py")
+        elif response.status_code == 200:
+            st.info("Password successfully changed")
+            st.switch_page("main.py")
         else:
             st.error(
                 f"Failed to change password "
@@ -133,4 +136,27 @@ def fetch_delete_mood(date):
             st.stop()
     except Exception as e:
         st.error(f"Error fetching mood: {e}")
+        st.stop()
+
+
+def fetch_edit_mood(date, value=None, note=None):
+    try:
+        params = {}
+        if value is not None:
+            params["value"] = value
+        if note is not None:
+            params["note"] = note
+
+        session = provide_requests_session()
+        response = session.put(f"{BASE_URL}/mood/{date}", json=params)
+
+        if response.status_code == 200:
+            return response.json()
+        elif response.status_code == 401:
+            st.switch_page("pages/authorization.py")
+        else:
+            st.error(f"Failed to edit user mood: {response.status_code}")
+            st.stop()
+    except Exception as e:
+        st.error(f"Error editing mood: {e}")
         st.stop()
