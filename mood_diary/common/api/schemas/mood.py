@@ -21,7 +21,7 @@ class CreateMoodStampRequest(BaseModel):
 
 
 class UpdateMoodStampRequest(BaseModel):
-    value: int | None = None
+    value: int | None = Field(default=None, ge=1, le=10)
     note: str | None = None
 
 

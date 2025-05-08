@@ -3,6 +3,7 @@ from time import sleep
 from unittest.mock import MagicMock, patch
 
 import pytest
+import jwt
 
 from mood_diary.backend.utils.token_manager import (
     JWTTokenManager,
@@ -187,4 +188,34 @@ def test_is_token_valid_unexpected_exception(
     is_valid = token_manager.is_token_valid(token)
 
     assert is_valid is False
+    mock_jwt_decode.assert_called_once()
+
+
+@patch("jwt.decode")
+def test_decode_catches_expired_signature_error(
+    mock_jwt_decode: MagicMock,
+    token_manager: JWTTokenManager,
+    user_id: uuid.UUID,
+):
+    """Test that decode_token specifically returns None on ExpiredSignatureError."""
+    mock_jwt_decode.side_effect = jwt.ExpiredSignatureError(
+        "Token has expired"
+    )
+    token = "any_token_string"
+    payload = token_manager.decode_token(token)
+    assert payload is None
+    mock_jwt_decode.assert_called_once()
+
+
+@patch("jwt.decode")
+def test_decode_catches_invalid_token_error(
+    mock_jwt_decode: MagicMock,
+    token_manager: JWTTokenManager,
+    user_id: uuid.UUID,
+):
+    """Test that decode_token specifically returns None on InvalidTokenError."""
+    mock_jwt_decode.side_effect = jwt.InvalidTokenError("Invalid token format")
+    token = "any_token_string"
+    payload = token_manager.decode_token(token)
+    assert payload is None
     mock_jwt_decode.assert_called_once()

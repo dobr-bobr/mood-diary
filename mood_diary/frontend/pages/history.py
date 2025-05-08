@@ -155,7 +155,7 @@ def display_mood_history():
                 )
                 st.markdown(
                     f'<div class="mood-rating">'
-                    f'{get_rating_emoji(rating)} {rating}</div>',
+                    f"{get_rating_emoji(rating)} {rating}</div>",
                     unsafe_allow_html=True,
                 )
 

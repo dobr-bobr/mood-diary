@@ -1,6 +1,5 @@
 import logging
 from contextlib import asynccontextmanager
-
 from fastapi import FastAPI, Request, HTTPException
 from fastapi_csrf_protect.exceptions import CsrfProtectError
 from starlette.responses import JSONResponse
