@@ -88,3 +88,7 @@ omit = [
     "*/__init__.py",
     "*/__main__.py"
 ]
+
+[tool.bandit]
+exclude = ["tests/*", "scripts/*", "locustfile.py"]
+skips = ["B311", "B105", "B110"]
