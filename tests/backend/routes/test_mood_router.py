@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi import FastAPI, status, Cookie
 from fastapi.testclient import TestClient
+
 from mood_diary.backend.exceptions.user import InvalidOrExpiredAccessToken
 from mood_diary.backend.exceptions.mood import (
     MoodStampAlreadyExists,
@@ -24,7 +25,7 @@ from mood_diary.common.api.schemas.mood import (
     MoodStampSchema,
 )
 
-from mood_diary.backend.routes.mood import router as mood_router, get_csrf_token
+from mood_diary.backend.routes.mood import router as mood_router
 
 
 # --- Fixtures ---
@@ -63,7 +64,7 @@ def main_app_mood(
     mock_redis_client: AsyncMock,
 ) -> FastAPI:
     app = FastAPI()
-    app.include_router(mood_router, prefix="/mood", tags=["moods"])
+    app.include_router(mood_router, prefix="/api/moods", tags=["moods"])
 
     async def override_get_current_user_id(
         access_token: str | None = Cookie(None),
