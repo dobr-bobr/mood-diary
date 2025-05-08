@@ -59,16 +59,30 @@ def test_refresh_data(mock_fetch, mock_streamlit_session_state):
 
     main_funcs.refresh_data()
 
-    assert mock_streamlit_session_state.session_state.user_ratings_df is not None
+    assert (
+        mock_streamlit_session_state.session_state.user_ratings_df is not None
+    )
     assert mock_streamlit_session_state.session_state.mood_data is not None
     assert mock_streamlit_session_state.session_state.needs_refresh is False
 
 
 def test_create_mood_chart_returns_chart():
-    df = pd.DataFrame([
-        {"date": datetime.datetime(2024, 5, 1), "rating": 5, "comment": "ok"},
-        {"date": datetime.datetime(2024, 5, 2), "rating": 7, "comment": "good"},
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "date": datetime.datetime(2024, 5, 1),
+                "rating": 5,
+                "comment": "ok",
+            },
+            {
+                "date": datetime.datetime(2024, 5, 2),
+                "rating": 7,
+                "comment": "good",
+            },
+        ]
+    )
 
     chart = main_funcs.create_mood_chart(df)
-    assert isinstance(chart, alt.Chart) or hasattr(chart, "to_json")  # VegaLiteChart
+    assert isinstance(chart, alt.Chart) or hasattr(
+        chart, "to_json"
+    )  # VegaLiteChart

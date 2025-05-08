@@ -12,7 +12,7 @@ from mood_diary.frontend.shared.api.api import (
 fetch_profile()
 
 if "user_ratings_df" not in st.session_state or st.session_state.get(
-        "needs_refresh", False
+    "needs_refresh", False
 ):
     refresh_data()
 if "form_comment" not in st.session_state:
@@ -118,9 +118,9 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
             st.warning("Please select a rating")
         else:
             if fetch_create_mood(
-                    st.session_state.selected_date,
-                    st.session_state.selected_rating,
-                    comment,
+                st.session_state.selected_date,
+                st.session_state.selected_rating,
+                comment,
             ):
                 st.session_state.form_comment = ""
                 st.session_state.selected_rating = None
