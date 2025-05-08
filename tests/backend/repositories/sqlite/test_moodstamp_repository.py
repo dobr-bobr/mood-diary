@@ -16,6 +16,11 @@ from mood_diary.backend.exceptions.mood import (
     MoodStampAlreadyExistsErrorRepo,
 )
 
+from tests.backend.repositories.sqlite.base_fixtures import (
+    mock_connection,
+    mock_cursor,
+)
+
 
 # --- Fixtures ---
 
