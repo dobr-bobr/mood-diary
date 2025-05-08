@@ -20,6 +20,41 @@ def fetch_profile():
         st.error(f"Error fetching profile: {e}")
         st.stop()
 
+
+def fetch_change_name(name):
+    try:
+        session = provide_requests_session()
+        response = session.put(f"{BASE_URL}/auth/profile", json={"name": name})
+        if response.status_code == 200:
+            profile_data = response.json()
+            st.session_state.name = profile_data.get("name", "User")
+        elif response.status_code == 401:
+            st.switch_page("pages/authorization.py")
+        else:
+            st.error("Failed to change name")
+            st.stop()
+    except Exception as e:
+        st.error(f"Error fetching change name: {e}")
+        st.stop()
+
+def fetch_change_password(old_password, new_password):
+    try:
+        session = provide_requests_session()
+        params = {
+            "old_password": old_password,
+            "new_password": new_password,
+        }
+        response = session.put(f"{BASE_URL}/auth/password", json=params)
+        if response.status_code == 401:
+            st.switch_page("pages/authorization.py")
+        else:
+            st.error(f"Failed to change password {response.status_code, response.text}")
+            st.stop()
+    except Exception as e:
+        st.error(f"Error fetching change password: {e}")
+        st.stop()
+
+
 def fetch_all_mood(start_date=None, end_date=None, value=None):
     try:
         session = provide_requests_session()

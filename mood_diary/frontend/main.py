@@ -161,9 +161,17 @@ with st.form(key="comment_form", clear_on_submit=False, enter_to_submit=False):
                 refresh_data()
                 st.rerun()
 
-if st.button("View Full Mood History"):
-    st.session_state.needs_refresh = True
-    st.switch_page("pages/history.py")
+col1, col2, col3 = st.columns(3)
 
-if st.button("View your profile"):
-    st.switch_page("pages/profile.py")
+with col1:
+    if st.button("View Full Mood History"):
+        st.session_state.needs_refresh = True
+        st.switch_page("pages/history.py")
+
+with col2:
+    if st.button("View Calendar"):
+        st.switch_page("pages/calendar.py")
+
+with col3:
+    if st.button("View your profile"):
+        st.switch_page("pages/profile.py")
